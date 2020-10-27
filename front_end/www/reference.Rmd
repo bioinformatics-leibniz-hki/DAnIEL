@@ -1,0 +1,116 @@
+---
+bibliography: "/sbidata/server/daniel/db/etc/daniel.bib"
+csl: "/sbidata/server/daniel/db/etc/daniel.csl" 
+output:
+  html_document:
+    theme: null
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(kableExtra)
+library(knitr)
+library(rmarkdown)
+library(danielLib)
+
+danielLib::setup_style()
+options(knitr.kable.NA = "")
+
+knitr::opts_chunk$set(
+  echo = FALSE,
+  warning = FALSE,
+  message = FALSE
+)
+
+steps <- c("input", "qc", "denoising", "phylotyping", "features", "analysis")
+```
+
+# Reference
+
+This page is about the specification of the server.
+A detailed description about tools, parameters, and tested browsers is given.
+
+## Tools
+The general framework is based on Snakemake [@pmid29788404], R, Tidyverse, and Docker.
+
+```{r}
+tools_tbl <-
+  Sys.getenv("DANIEL_DB_DIR") %>%
+  paste0("/etc/tools.csv") %>%
+  readr::read_csv() %>%
+  dplyr::mutate(param_set = param_set %>% factor(levels = steps, ordered = TRUE))
+
+tools_tbl %>%
+  arrange(param_set, id) %>%
+  select(`Pipeline step` = param_set, Tool = id, Description = description, Version = version, Citation = citation, Source = source) %>%
+  kable(caption = "Tools") %>%
+  column_spec(3, width = "20em") %>%
+  kableExtra::collapse_rows(1)
+```
+
+## Parameters
+
+In the input and start section, the following parameters can be set to customize the workflow:
+
+```{r}
+param_fmt_html <- "
+<p>
+  <p>
+    <b>%s</b> <br />
+    %s <br />
+  </p>
+  <p>
+    Type: %s <br />
+    Default: %s <br />
+  </p>
+</p>
+"
+
+#' @param sep (sub)string separating two elements of s
+#' @param s string representing a list. Elements must be separated by sep
+#' @return s if s is single element, else HTML list of s
+html_if_needed <- function(s, sep = "~") {
+  if(is.na(s)) return(NA)
+  if(! stringr::str_detect(s, sep)) return(s)
+  
+  s %>%
+    str_split("~") %>%
+    simplify() %>%
+    map(~ paste0("<li>", .x, "</li>")) %>%
+    paste0(collapse = " ") %>%
+    paste0("<ul>", ., "</ul>")
+}
+
+params_tbl <-
+  Sys.getenv("DANIEL_DB_DIR") %>%
+  paste0("/etc/params.csv") %>%
+  readr::read_csv() %>%
+  dplyr::mutate(param_set = param_set %>% factor(levels = steps, ordered = TRUE))
+
+params_tbl %>%
+  dplyr::group_by(id) %>%
+  dplyr::mutate(
+    default_html = default %>% html_if_needed(),
+    html = sprintf(param_fmt_html, label, description, type, default_html)
+  ) %>%
+  purrr::pluck("html") %>%
+  shiny::HTML()
+```
+
+## Browsers
+
+DAnIEL was sucessfully tested with the following browers:
+
+```{r}
+browsers_tbl <-
+  Sys.getenv("DANIEL_DB_DIR") %>%
+  paste0("/etc/browsers.csv") %>%
+  readr::read_csv(col_types = cols(Versions = col_character()))
+
+browsers_tbl %>% 
+  mutate(Versions = as.character(Versions)) %>%
+  kable(caption = "Browsers")
+```
+
+
+## References

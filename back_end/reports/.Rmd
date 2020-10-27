@@ -1,0 +1,101 @@
+---
+bibliography: references.bib
+csl: references.csl
+output:
+  html_document:
+    theme: null
+    df_print: kable
+params:
+  project_dir: /sbidata/server/daniel/userdat/example
+  db_dir: /sbidata/server/daniel/db/
+---
+
+```{r setup, include=FALSE}
+source("defaults.R")
+
+library(vegan)
+library(phyloseq)
+library(ComplexHeatmap)
+
+project <-
+  paste0(params$project_dir, "/input/project.json") %>%
+  jsonlite::read_json(simplifyVector = TRUE)
+
+features_params <- project$params$features_params[[project$selected_params$features]]
+features_dir <- paste0(params$project_dir, "/features/", stringr::str_replace_all(project$selected_params$features, " ", "_"), "/")
+
+samples_tbl <-
+  paste0(params$project_dir, "/input/samples.csv") %>%
+  read_csv_guess_coltypes()
+
+features_raw_tbl <-
+  paste0(features_dir, "features.raw.csv") %>%
+  readr::read_csv()
+
+features_tbl <-
+  paste0(features_dir, "features.csv") %>%
+  readr::read_csv()
+
+features <-
+  features_tbl %>%
+  colnames() %>%
+  setdiff("sample_id")
+
+features_phy <-
+  paste0(features_dir, "phyloseq.rds") %>%
+  readr::read_rds()
+
+phylo_db <-
+  paste0(params$db_dir, "/phylogenies/db.csv") %>%
+  readr::read_csv() %>%
+  dplyr::filter(id == features_params$phylo_database) %>%
+  as.list()
+
+alpha_div_tbl <- alpha_diversity_all(features_raw_tbl)
+alpha_div_metrics <- alpha_div_tbl %>%
+  colnames() %>%
+  setdiff("sample_id")
+```
+
+# Features
+
+Feature generation is the process of pooling denoised sequences at a given taxonomic rank.
+Furthermore, abundance profiles were normalized to make them comparable between differentially sequenced samples.
+
+## Methods
+- Abundances of denoised sequences were pooled to `r {features_params$taxonomic_rank}` rank
+- Phylogeny used: `r {phylo_db$name}`: `r {phylo_db$description}`
+- Normalization method used: `r {features_params$normalization_method}`
+- A feature is considered as prevalent if it's abundance is at least `r {features_params$min_abundance}`%
+- Only features more prevalent than `r {features_params$min_prevalence}` of all samples were kept for downstream analysis
+
+## Results
+- Totalling `r {length(features)}` features were generated
+- Alpha diversity
+  - Shannnon ranged `r {alpha_div_tbl$shannon %>% summary_text(num_fmt = ".2f")}`
+  - Simpson ranged `r {alpha_div_tbl$simpson %>% summary_text(num_fmt = ".2f")}`
+  - Inverse Simpson ranged `r {alpha_div_tbl$invsimpson %>% summary_text(num_fmt = ".2f")}`
+
+```{r, fig.cap = "Abundance profile"}
+abundance_cmap(
+  features_tbl = features_tbl,
+  normalization_method = features_params$normalization_method,
+  taxonomic_rank = features_params$taxonomic_rank
+)
+```
+
+
+```{r, fig.cap = "Alpha diversity"}
+alpha_div_tbl %>%
+  tidyr::gather(alphadiv_key, alphadiv_val, -sample_id) %>%
+  dplyr::inner_join(samples_tbl) %>%
+  ggplot2::ggplot(aes(sample_id, alphadiv_val)) +
+  ggplot2::geom_bar(stat = "identity") +
+  ggplot2::coord_flip() +
+  ggplot2::facet_wrap(~alphadiv_key, scales = "free_x") +
+  ggplot2::labs(x = "Sample", y = "Alpha diversity")
+```
+
+```{r, fig.cap = "Ordination: Between groups beta diversity"}
+plot_ordination_adonis(features_phy)
+```

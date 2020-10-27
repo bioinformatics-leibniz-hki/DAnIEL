@@ -1,0 +1,251 @@
+---
+bibliography: references.bib
+csl: references.csl
+output:
+  html_document:
+    theme: null
+    df_print: kable
+params:
+  reports_dir: /sbidata/server/daniel/src/back_end/reports/
+  project_dir: /sbidata/server/daniel/userdat/test_banocc/
+  db_dir: /sbidata/server/daniel/db/
+---
+
+```{r, include=FALSE}
+source("defaults.R")
+
+project <-
+  paste0(params$project_dir, "/input/project.json") %>%
+  jsonlite::read_json(simplifyVector = TRUE)
+
+selected_params <- danielLib::get_selected_params(project)
+
+analysis_params <- project$params$analysis_params[[selected_params$analysis]]
+analysis_dir <- paste0(params$project_dir, "/analysis/", stringr::str_replace_all(selected_params$analysis, " ", "_"), "/")
+statistics_dir <- paste0(analysis_dir, "statistics/")
+
+pval_max <- analysis_params$max_pvalue
+
+#' @param filter_q_value also filter for q value
+filter_significant <- function(stat_tbl, pval_max = 0.05, filter_q_value = FALSE) {
+  if(filter_q_value) {
+    stat_tbl %>%
+      dplyr::filter(q.value <= pval_max)
+  } else {
+    stat_tbl %>%
+      dplyr::filter(p.value <= pval_max)
+  }
+}
+
+any_significant <- function(stat_tbl, pval_max = 0.05, filter_q_value = FALSE) {
+  stat_tbl %>%
+    filter_significant(pval_max = pval_max, filter_q_value = filter_q_value) %>%
+    dim() %>%
+    purrr::pluck(1) %>%
+    magrittr::is_greater_than(0)
+}
+
+significant_features <- function(stat_tbl) {
+  stat_tbl %>%
+    filter_significant() %>%
+    dplyr::pull(feature) %>%
+    unique() %>%
+    paste(collapse = ",")
+}
+
+significant_groups <- function(stat_tbl) {
+  stat_tbl %>%
+    filter_significant() %>%
+    dplyr::pull(group_var) %>%
+    unique() %>%
+    paste(collapse = ",")
+}
+
+significant_tests_count_str <- function(stat_tbl) {
+  stat_tbl %>%
+    filter_significant() %>%
+    dim() %>%
+    purrr::pluck(1) %>%
+    as.character()
+}
+
+stat_tbl <-
+  paste0(statistics_dir, "stat.csv") %>%
+  readr::read_csv()
+
+stat_bivariate_tbl <-
+  stat_tbl %>%
+  dplyr::filter(test_type == "two groups") 
+stat_bivariate_test <-
+  stat_bivariate_tbl$method %>%
+  unique() %>%
+  setdiff(NA) %>%
+  purrr::pluck(1)
+
+stat_aov_pre_tbl <-
+  stat_tbl %>%
+  dplyr::filter(test_type == "pre one way AOV") 
+stat_aov_test <- 
+  stat_aov_pre_tbl$method %>%
+  unique() %>%
+  setdiff(NA) %>%
+  purrr::pluck(1)
+
+stat_aov_post_tbl <- 
+  stat_tbl %>%
+  dplyr::filter(test_type == "post one way AOV") 
+
+stat_cor_tbl <-
+  stat_tbl %>%
+  dplyr::filter(test_type == "correlation") 
+```
+
+<script>MathJax.Hub.Queue(["Typeset", MathJax.Hub]);</script>
+
+# Statistics
+Here, statistics refers to comparisons of feature abundance between sample groups.
+
+```{rmd, eval=stat_tbl %>% nrow() == 0}
+## Results
+
+- No test was performed due to lacking sample meta data
+```
+```{r, eval=stat_tbl %>% nrow() == 0}
+knitr::knit_exit()
+```
+
+## Methods
+- A uniform threshold to reject the null hypothesis of $p \leq  `r {pval_max}`$ was chosen
+- P values were adjusted for false discovery rate (FDR) in testing of multiple sample groupings. No adjustment was performed for multiple features.
+
+```{rmd, eval = stat_tbl %>% filter(paired) %>% dim() %>% purrr::pluck(1) > 0}
+- Paired difference tests were applied as indicated
+- Column pair_id of sample meta data table was used to pair the samples
+```
+
+```{rmd, eval = stat_bivariate_tbl %>% dim() %>% purrr::pluck(1) > 0}
+- Two means tests
+  - Two means tests was applied on binary sample groups
+  - Test: `r {stat_bivariate_test}`
+  - Sample groups: `r {stat_bivariate_tbl$group_var %>% unique() %>% paste(collapse = ", ")}`
+```
+
+```{rmd, eval = stat_aov_pre_tbl %>% dim() %>% purrr::pluck(1) > 0}
+- Three and more means tests
+  - Three and more means statistics was applied on sample groups having more than two distinct nominal values
+  - Test: `r {stat_aov_test}`
+  - Post hoc test: `r {stat_aov_post_tbl$method %>% unique() %>% setdiff(NA) %>% purrr::pluck(1)}`
+  - Sample groups: `r {stat_aov_pre_tbl$group_var %>% unique() %>% paste(collapse = ", ")}`
+```
+
+```{rmd, eval = stat_cor_tbl %>% dim() %>% purrr::pluck(1) > 0}
+- Correlation tests
+  - Correlation tests were applied on continuous sample meta data features
+  - Sample attributes tested: `r {stat_cor_tbl$group_var %>% unique() %>% paste(collapse = ", ")}`
+```
+
+## Results
+```{rmd, eval = stat_bivariate_tbl %>% any_significant()}
+- Two means tests
+  - Significant tests: `r {stat_bivariate_tbl %>% significant_tests_count_str()}`
+  - Significant sample groups: `r {stat_bivariate_tbl %>% significant_groups()}`
+  - Significant features: `r {stat_bivariate_tbl %>% significant_features()}`
+```
+```{rmd, eval = ! stat_bivariate_tbl %>% any_significant()}
+- No two means test yielded significance
+```
+```{rmd, eval = stat_aov_post_tbl %>% any_significant()}
+- Three and more means tests
+  - Significance was evaluated on post hoc test level
+  - Significant tests: `r {stat_aov_post_tbl %>% significant_tests_count_str()}`
+  - Significant sample groups: `r {stat_aov_post_tbl %>% significant_groups()}`
+  - Significant features: `r {stat_aov_post_tbl %>% significant_features()}`
+```
+```{rmd, eval = ! stat_aov_post_tbl %>% any_significant() && stat_aov_pre_tbl %>% any_significant()}
+- Three and more means tests
+  - No post hoc three and more means test was significant
+  - Therefore, significance was evaluated on the level of the first test
+  - Significant tests: `r {stat_aov_pre_tbl %>% significant_tests_count_str()`
+  - Significant sample groups: `r {stat_aov_pre_tbl %>% significant_groups()}`
+  - Significant features: `r {stat_aov_pre_tbl %>% significant_features()}`
+```
+```{rmd, eval = ! (stat_aov_post_tbl %>% any_significant() && stat_aov_pre_tbl %>% any_significant()) }
+- Neither three and more means tests nor post hoc tests yielded any significant result
+```
+```{rmd, eval = stat_cor_tbl %>% any_significant()}
+- Correlation tests
+  - Significance was evaluated on post hoc test level
+  - Number of significant tests: `r {stat_cor_tbl %>% filter_significant() %>% dim() %>% pluck(1) %>% as.character()}`
+  - Significant sample groups: `r {stat_cor_tbl %>% filter_significant() %>% dplyr::pull(group_var) %>% unique()}`
+  - Significant features: `r {stat_cor_tbl %>% filter_significant() %>% dplyr::pull(feature) %>% unique() %>% paste(collapse = ", ")}`
+```
+```{rmd, eval = ! stat_cor_tbl %>% any_significant()}
+- No correlation test yielded significance
+```
+
+```{r, eval = stat_bivariate_tbl %>% filter_significant() %>% dim() %>% purrr::pluck(1) > 0}
+stat_bivariate_tbl %>%
+  filter_significant() %>%
+  dplyr::mutate(
+    group_var = group_var %>%
+      kableExtra::cell_spec(
+        format = "HTML",
+        tooltip = sample_ids %>% str_replace_all(",", ", ") %>% paste0("Samples used:", .) %>% paste0(group_counts, "\n", .)
+      )
+  ) %>%
+  dplyr::select(
+    Grouping = `group_var`, Feature = feature,
+    `Paired test` = paired, `p value` = p.value, `q value` = q.value,
+    `Cliff's Delta`, `Log2 FC`, `higher in` = higher.in
+  ) %>%
+  kable(caption = "Significant two means comparisons") %>%
+  collapse_rows(columns = 1:2)
+```
+
+```{r, eval = stat_aov_pre_tbl %>% filter_significant() %>% dim() %>% purrr::pluck(1) > 0}
+stat_aov_pre_tbl %>%
+  filter_significant() %>%
+  dplyr::arrange(feature) %>%
+  select(
+    Grouping = `group_var`, Feature = feature,
+    `p value` = p.value, `q value` = q.value
+  ) %>%
+  kable(caption = "Significant three or more means pre hoc tests") %>%
+  collapse_rows(columns = 1:2)
+```
+
+```{r, eval = stat_aov_post_tbl %>% filter_significant() %>% dim() %>% purrr::pluck(1) > 0}
+stat_aov_post_tbl %>%
+  filter_significant() %>%
+  dplyr::arrange(feature) %>%
+  dplyr::select(
+    Grouping = `group_var`, Feature = feature, `Group A` = group_a, `Group B` = group_b, `higher in` = higher.in,
+    `p value` = p.value, `q value` = q.value, `Cliff's Delta`, `Log2 FC`
+  ) %>%
+  kable(caption = "Significant three or more means post hoc tests") %>%
+  collapse_rows(columns = 1:2)
+```
+
+```{r, eval = stat_cor_tbl %>% filter_significant() %>% dim() %>% purrr::pluck(1) > 0}
+stat_cor_tbl %>%
+  filter_significant() %>%
+  dplyr::arrange(feature) %>%
+    dplyr::select(
+    Grouping = `group_var`, Feature = feature,
+    `p value` = p.value, `q value` = q.value,
+  ) %>%
+  kable(caption = "Significant correlation tests") %>%
+  collapse_rows(columns = 1:2)
+```
+
+```{r, eval = "error" %in% colnames(stat_tbl) && stat_tbl %>% dplyr::filter(! is.na(error)) %>% dim() %>% purrr::pluck(1) > 0}
+stat_tbl %>%
+  dplyr::filter(! is.na(error)) %>%
+  dplyr::group_by(error) %>%
+  dplyr::summarise(
+    group_vars = group_var %>% unique() %>% paste(collapse = ", "),
+    features = feature %>% unique() %>% head(5) %>% paste(collapse = ", ")
+  ) %>%
+  dplyr::rename(`Grouping` = group_vars, Error = error, `Features (max. 5)` = features) %>%
+  kable(caption = "Errors occurred in statistical tests")
+```

@@ -1,0 +1,13 @@
+id,param_set, description, version, citation,source
+grabseqs ,raw,Downlaoding raw reads from NCBI SRA,0.5,,[Anaconda](https://anaconda.org/louiejtaylor/grabseqs)
+FastQC,qc,Assessing sequence read quality,0.11.8,,[Anaconda](https://anaconda.org/bioconda/fastqc)
+MultiQC,qc,Combining FastQC results from multiple samples,1.7,@Ewels2016,[Anaconda](https://anaconda.org/bioconda/multiqc)
+trimmomatic,qc,QC reads by filtering and trimming,0.39,@Bolger2014,[Anaconda](https://anaconda.org/bioconda/trimmomatic)
+DADA2,denoising,Denoising reads to get Amplicon Sequencing Variants (ASV),1.14,@Callahan2016,[Anaconda](https://anaconda.org/bioconda/bioconductor-dada2)
+PIPITS,denoising,Denoising reads to get Operational Taxonomic Units (OTU),2.4,@Gweon2015,[Anaconda](https://anaconda.org/bioconda/pipits)
+QIIME2,phylotyping,"Taxonomic classifications of representative sequences, tree building",r2019.7,@Bolyen2019,[Anaconda](https://anaconda.org/qiime2/qiime2)
+vegan,analysis,Diversity analysis,2,,[Anaconda](https://anaconda.org/bioconda/r-vegan)
+phyloseq,analysis,"R package for handling samples, features, and trees",,@McMurdie2013,[Anaconda](https://anaconda.org/bioconda/bioconductor-phyloseq)
+caret,analysis,R package for Machine Learning,6,,[Anaconda](https://anaconda.org/r/r-caret)
+SparCC / FastSpar,analysis, sparseness aware correlations between species, 0.0.1,"@Watts2019, @Friedman2012",[Anaconda](https://anaconda.org/bioconda/fastspar)
+BAnOCC,analysis, compositionality aware correlations between species,1.1,@Schwager2017,[Anaconda](https://anaconda.org/bioconda/bioconductor-banocc)

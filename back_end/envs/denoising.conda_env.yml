@@ -1,0 +1,14 @@
+name: denoising
+channels:
+ - conda-forge
+ - bioconda
+ - r
+ - defaults
+dependencies:
+ - r-base=3.6.1
+ - r-tidyverse
+ - r-optparse
+ - r-svglite
+ - bioconductor-dada2
+ - pipits
+ - bioawk

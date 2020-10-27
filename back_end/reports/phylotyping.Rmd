@@ -1,0 +1,135 @@
+---
+bibliography: references.bib
+csl: references.csl
+output:
+  html_document:
+    theme: null
+    df_print: kable
+params:
+  reports_dir: /sbidata/server/daniel/src/latest/back_end/reports/
+  project_dir: /sbidata/server/daniel/userdat/example/
+  db_dir: /sbidata/server/daniel/db/
+---
+
+```{r, include=FALSE}
+source("defaults.R")
+
+project <-
+  paste0(params$project_dir, "/input/project.json") %>%
+  jsonlite::read_json(simplifyVector = TRUE)
+
+selected_params <- danielLib::get_selected_params(project)
+
+phylotyping_params <- project$params$phylotyping_params[[selected_params$phylotyping]]
+phylotyping_dir <- paste0(params$project_dir, "/phylotyping/", stringr::str_replace_all(selected_params$phylotyping, " ", "_"), "/")
+denoising_dir <- paste0(params$project_dir, "/denoising/", stringr::str_replace_all(selected_params$denoising, " ", "_"), "/")
+
+taxa <- c("species", "genus", "family", "order", "class", "phylum")
+
+denoised_tbl <-
+  paste0(denoising_dir, "denoised.csv") %>%
+  readr::read_csv() %>%
+  tidyr::gather(denoised, abundance, -sample_id)
+
+phylotyped_tbl <-
+  paste0(phylotyping_dir, "phylotyped.csv") %>%
+  readr::read_csv()
+
+classified_tbl <-
+  phylotyped_tbl %>%
+  dplyr::select(-kingdom) %>%
+  tidyr::gather(taxrank, taxon, -sequence, -confidence) %>%
+  dplyr::mutate(classified = ! is.na(taxon)) %>%
+  dplyr::group_by(taxrank, classified) %>%
+  dplyr::count() %>%
+  tidyr::spread(classified, n) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(frac_classified = `TRUE` / (`TRUE` + `FALSE`)) %>%
+  dplyr::select(taxrank, frac_classified) %>%
+  dplyr::filter(! is.na(frac_classified)) %>%
+  dplyr::arrange(-dplyr::row_number()) %>%
+  dplyr::mutate(taxrank = taxrank %>% factor(levels = taxa, ordered = TRUE))
+
+majority_classified_text <-
+  classified_tbl %>%
+  dplyr::filter(frac_classified > 0.5) %>%
+  pull(taxrank) %>% {
+    ifelse(
+      test = purrr::is_empty(.),
+      yes = "The majority of the representative sequences were not annotated up to the phylum rank",
+      no = sprintf("The majority of the representative sequences were annotated at least up to %s rank", .))
+    }
+
+db <-
+  paste0(params$db_dir, "/reference_db/db.csv") %>%
+  readr::read_csv() %>%
+  dplyr::filter(id == phylotyping_params$ref_database) %>%
+  as.list()
+```
+
+# Phylotyping
+Phylotyping is the process of taxonomic annotation of the denoised representative sequences.
+
+## Methods
+```{rmd, eval = phylotyping_params$sequence_classifier == "qiime2_nb"}
+- Representative sequences were classified using QIIME2 Naive Bayes Classifier [@pmid31399723]
+```
+```{rmd, eval = phylotyping_params$ref_database %>% stringr::str_detect("^unite")}
+- The database '`r {db$name}`' was used for taxonomic classification [@pmid30371820]
+```
+```{rmd, eval = phylotyping_params$ref_database %>% stringr::str_detect("^thf")}
+- The database '`r {db$name}`' was used for taxonomic classification [@pmid30371820]
+```
+```{rmd, eval = phylotyping_params$sequence_classifier == "qiime2_blast"}
+- A minimum sequence identity of `r {phylotyping_params$frac_identity * 100}`% was required for taxonomic annotation [@pmid25891793]
+```
+
+## Results
+- `r {classified_tbl %>% dplyr::filter(taxrank == "species") %>% pull(frac_classified) %>% magrittr::multiply_by(100) %>% round(1)}`% and `r {classified_tbl %>% dplyr::filter(taxrank == "phylum") %>% pull(frac_classified) %>% magrittr::multiply_by(100) %>% round(1)}`% of all representative sequences were successfully annotated at species and phylum level, respectively
+- `r {majority_classified_text}`
+
+```{r, fig.cap = "Fraction of representative sequences classified at any given taxonomic rank"}
+classified_plt <-
+  classified_tbl %>%
+  dplyr::filter(! is.na(taxrank)) %>%
+  dplyr::mutate(perc_classified = frac_classified * 100) %>%
+  ggplot2::ggplot(aes(taxrank, perc_classified, tooltip = sprintf("%.2f", perc_classified))) +
+    ggiraph::geom_bar_interactive(stat = "identity") +
+    ggplot2::labs(x = "Taxonomic rank", y = "Classified (%)")
+plot_girafe(classified_plt)
+```
+
+
+```{r, fig.cap = "Fraction of denoised abundance unclassified at any given taxonomic rank"}
+abundance_classified_tbl <-
+  phylotyped_tbl %>%
+  dplyr::inner_join(denoised_tbl, by = c("sequence" = "denoised")) %>%
+  tidyr::gather(taxrank, taxon, taxa) %>%
+  # TSS normalization of abundance per sample
+  dplyr::group_by(sample_id) %>%
+  dplyr::mutate(abundance = abundance / sum(abundance) * 100) %>%
+  dplyr::filter(is.na(taxon)) %>%
+  # get farction of unclassified abundance
+  dplyr::group_by(sample_id, taxrank) %>%
+  dplyr::summarise(abundance_classified_perc = 100 - sum(abundance)) %>%
+  dplyr::mutate(taxrank = taxrank %>% factor(levels = taxa, ordered = TRUE))
+
+abundance_classified_plt <-
+   abundance_classified_tbl %>%
+   dplyr::mutate(tooltip = sprintf("Sample:%s<br>Rank:%s<br>Classified:%.2f%%", sample_id, taxrank, abundance_classified_perc)) %>%
+   ggplot2::ggplot(aes(sample_id, taxrank, fill = abundance_classified_perc, tooltip = tooltip)) +
+     ggiraph::geom_tile_interactive() +
+     ggplot2::coord_flip() +
+     ggplot2::labs(x = "Sample", y = "Taxonomic rank", fill = "Classified\ndenoised\nabundance (%)")
+ plot_girafe(abundance_classified_plt)
+```
+
+```{r, fig.cap = "Distribution of classification confidence among all classifications"}
+phylotyped_plt <-
+  phylotyped_tbl %>%
+  ggplot(aes(confidence, tooltip = confidence)) +
+    ggiraph::geom_histogram_interactive()
+plot_girafe(phylotyped_plt)
+```
+
+## References

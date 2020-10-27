@@ -1,0 +1,41 @@
+# Existing cohort
+
+NICU and breast milk (PRJNA505509)
+
+Query: scientific_name == 'hospital metagenome' & total_spots > 30e3
+
+
+# SRA IDs
+
+SRR5098710
+SRR5098580  
+SRR5098736
+SRR5098677
+SRR5098500
+SRR5098394
+SRR5098370
+SRR5098413
+SRR5098489
+SRR5098436
+SRR5098698
+SRR5098401
+SRR5098363
+SRR5098721
+SRR5098511
+SRR5098498
+SRR5098398
+SRR5098371
+SRR5098341
+SRR5098421
+
+# primer
+
+>Forward primer ITS3
+GCATCGATGAAGAACGCAGC
+>Reverse primer ITS4
+TCCTCCGCTTATTGATATGC
+
+# parameter
+QC: add primer
+Denoising: asv its2
+analysis: correlation grouping: disease

@@ -1,0 +1,115 @@
+---
+bibliography: references.bib
+csl: references.csl
+output:
+  html_document:
+    theme: null
+    df_print: kable
+params:
+  reports_dir: /sbidata/server/daniel/src/back_end/reports/
+  project_dir: /sbidata/server/daniel/userdat/test_sra/
+  db_dir: /sbidata/server/daniel/db/
+---
+
+```{r, include=FALSE}
+  source("defaults.R")
+
+library(vegan)
+library(phyloseq)
+library(ComplexHeatmap)
+
+project <-
+  paste0(params$project_dir, "/input/project.json") %>%
+  jsonlite::read_json(simplifyVector = TRUE)
+
+selected_params <- danielLib::get_selected_params(project)
+
+features_params <- project$params$features_params[[selected_params$features]]
+features_dir <- paste0(params$project_dir, "/features/", stringr::str_replace_all(selected_params$features, " ", "_"), "/")
+
+samples_tbl <-
+  paste0(params$project_dir, "/input/samples.csv") %>%
+  read_csv_guess_coltypes()
+
+features_raw_tbl <-
+  paste0(features_dir, "features.raw.csv") %>%
+  readr::read_csv()
+
+features_tbl <-
+  paste0(features_dir, "features.csv") %>%
+  readr::read_csv()
+
+features <-
+  features_tbl %>%
+  colnames() %>%
+  setdiff("sample_id")
+
+features_phy <-
+  paste0(features_dir, "phyloseq.rds") %>%
+  readr::read_rds()
+
+phylo_db <-
+  paste0(params$db_dir, "/phylogenies/db.csv") %>%
+  readr::read_csv() %>%
+  dplyr::filter(id == features_params$phylo_database) %>%
+  as.list()
+
+alpha_div_tbl <- try(danielLib::get_alpha_diversity_all(features_raw_tbl), silent = TRUE)
+alpha_div_metrics <- try(
+  alpha_div_tbl %>%
+  colnames() %>%
+  setdiff("sample_id")
+)
+```
+
+# Features
+
+Feature generation is the process of pooling denoised sequences at a given taxonomic rank.
+Furthermore, abundance profiles were normalized to make them comparable between differentially sequenced samples.
+
+## Methods
+- Abundances of denoised sequences were pooled to `r {features_params$taxonomic_rank}` rank
+- Phylogeny used: `r {phylo_db$name}`: `r {phylo_db$description}`
+- Normalization method used: `r {features_params$normalization_method}`
+- Cumulative sum scaling (css) normalization is used for ordination biplots to ensure non-negative abundance values
+- A feature is considered as prevalent if it's abundance is at least `r {features_params$min_abundance}`%
+- Only features more prevalent than `r {features_params$min_prevalence}`% of all samples were kept for downstream analysis
+
+## Results
+- Totaling `r {length(features)}` features and `r {samples_tbl %>% nrow()}` samples were generated
+
+```{rmd, eval = 'data.frame' %in% class(alpha_div_tbl)}
+- Alpha diversity on feature level (`r {features_params$taxonomic_rank}`)
+  - Shannon ranged `r {alpha_div_tbl$Shannon %>% summary_text(num_fmt = ".2f")}`
+  - Chao1 ranged `r {alpha_div_tbl$Chao1 %>% summary_text(num_fmt = ".2f")}`
+  - Inverse Simpson index ranged `r {alpha_div_tbl$InvSimpson %>% summary_text(num_fmt = ".2f")}`
+```
+
+```{r, fig.cap="Feature alpha diversity"}
+try(
+ danielLib::plot_alpha_diversity(abundance_tbl = features_raw_tbl, samples_tbl = samples_tbl) %>% ggiraph::girafe(ggobj = .)
+)
+```
+
+```{r, fig.cap = "Abundance profile"}
+try(
+ danielLib::plot_abundance_clustermap(
+  features_tbl = features_tbl,
+  normalization_method = features_params$normalization_method,
+  taxonomic_rank = features_params$taxonomic_rank
+)
+)
+```
+
+```{r}
+features_ord_plt <- try(danielLib::plot_beta_diversity(features_phy), silent = TRUE)
+```
+
+```{r, fig.cap = "Ordination: Between groups beta diversity", eval = "ggplot" %in% class(features_ord_plt)}
+ggiraph::girafe(ggobj = features_ord_plt)
+```
+
+```{rmd, eval= class(features_ord_plt) == "try-error"}
+- Ordination plot could not be generated: `r {features_ord_plt[1]}`
+```
+

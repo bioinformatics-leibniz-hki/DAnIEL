@@ -1,0 +1,23 @@
+/* hide section wise references */
+
+div[id^="references"] {
+	visibility: hidden;
+	height: 0;
+}
+
+h1 {
+	margin-top: 0.7em;
+}
+
+body {
+  margin: auto;
+  max-width: 1000px;
+}
+
+img {
+  width: 80%;
+}
+
+svg {
+  width: 80% !important;
+}

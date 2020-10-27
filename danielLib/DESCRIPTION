@@ -1,0 +1,27 @@
+Package: danielLib
+Type: Package
+Title: Functions used in front and back end of DAnIEL web server for ITS analysis
+Version: 0.1.0
+Author: Daniel Loos
+Maintainer: Daniel Loos <daniel.loos@leibniz-hki.de>
+Description: Functions used in front and back end of funexplorer web server for ITS analysis
+License: What license is it under?
+Encoding: UTF-8
+LazyData: true
+biocViews:
+Imports:
+    tidyverse,
+	dplyr (< 1.0.0),
+    rmarkdown,
+    magrittr,
+    visNetwork,
+    ggsci,
+    plotROC,
+    pROC,
+    rstan,
+    kableExtra,
+	ggiraph,
+	tidygraph,
+	ggraph,
+	phyloseq
+RoxygenNote: 7.0.2

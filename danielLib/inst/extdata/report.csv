@@ -1,0 +1,7 @@
+placeholder,value
+added_projects_count,2
+added_projects,"HMP, ICU"
+excluded_sample_criteria,"fastqc_adapter_content_failed, fastqc_per_base_n_content_failed, fastqc_per_base_sequence_quality_failed, fastqc_per_sequence_quality_scores_failed, min_qc_read_count_failed"
+ref_database_name,UNITE 8.0 dynamic
+meta_data_groups,"cohort, feces_cancer_treatment, feces_group"
+blast_identity_percent,80

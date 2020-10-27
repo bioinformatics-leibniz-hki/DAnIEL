@@ -1,0 +1,83 @@
+{
+  "version": "CI",
+  "name": "project1",
+  "user": "example",
+  "project_dir": "/sbidata/dloos/prj/6-its-web-server/userdat/example",
+  "params": {
+    "qc_params": {
+      "Default QC": {
+        "phred_format": "phred33",
+        "adapter_fasta": "",
+        "min_read_length": 100,
+        "include_revcomp_primers": true,
+        "min_quality_trailing": 25,
+        "min_quality_leading": 25,
+        "additional_adapter_files": ["NexteraPE-PE.fa", "TruSeq2-PE.fa", "TruSeq3-PE-2.fa"],
+        "min_qc_read_count": 1000,
+        "qc_exclusion_criteria": ["fastqc_adapter_content_failed", "fastqc_per_base_n_content_failed", "fastqc_per_base_sequence_quality_failed", "fastqc_per_sequence_quality_scores_failed"]
+      },
+      "Min 100 Reads ITS2": {
+        "phred_format": "phred33",
+        "adapter_fasta": ">ITS3\nGCATCGATGAAGAACGCAGC\n>ITS4\nTCCTCCGCTTATTGATATGC",
+        "min_read_length": 100,
+        "include_revcomp_primers": true,
+        "min_quality_trailing": 25,
+        "min_quality_leading": 25,
+        "additional_adapter_files": ["NexteraPE-PE.fa", "TruSeq2-PE.fa", "TruSeq3-PE-2.fa"],
+        "min_qc_read_count": 100,
+        "qc_exclusion_criteria": ["fastqc_adapter_content_failed", "fastqc_per_base_n_content_failed", "fastqc_per_base_sequence_quality_failed", "fastqc_per_sequence_quality_scores_failed", "min_qc_read_count_failed"]
+      }
+    },
+    "denoising_params": {
+      "Default denoising": {
+        "its_region": "ITS1",
+        "denoising_method": "asv_dada2",
+        "include_singletons": false
+      },
+      "ASV ITS2": {
+        "its_region": "ITS2",
+        "denoising_method": "asv_dada2",
+        "include_singletons": false
+      }
+    },
+    "phylotyping_params": {
+      "Default phylotyping": {
+        "ref_database": "unite_8.0_dynamic",
+        "sequence_classifier": "qiime2_nb",
+        "frac_identity": 0.8
+      }
+    },
+    "features_params": {
+      "Default features": {
+        "taxonomic_rank": "species",
+        "phylogeny": "ncbi-2019-08-21",
+        "normalization_method": "clr",
+        "min_abundance": 0.01,
+        "min_prevalence": 20
+      }
+    },
+    "analysis_params": {
+      "Default analysis": {
+        "inter_species_correlation_method": "sparcc",
+        "target_variable": "None",
+        "target_classifier": "Random Forest"
+      }
+    }
+  },
+  "start_datetime": "Wed Sep 11 11:27:34 2019",
+  "selected_params": {
+    "qc": "Min 100 Reads ITS2",
+    "denoising": "ASV ITS2",
+    "phylotyping": "Default phylotyping",
+    "features": "Default features",
+    "analysis": "Default analysis"
+  },
+  "input": {
+    "projects": [],
+    "sra_ids": [],
+    "urls": [],
+    "local_samples": [],
+    "muxed_samples": [],
+    "meta_samples": []
+  }
+}

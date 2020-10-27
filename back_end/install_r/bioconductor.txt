@@ -1,0 +1,10 @@
+BiocParallel
+ComplexHeatmap
+GenomeInfoDb
+ShortRead
+banocc
+dada2
+ggtree
+metagenomeSeq
+phyloseq
+treeio

@@ -1,0 +1,44 @@
+---
+title: "Tutorial"
+bibliography: "../../danielLib/inst/extdata/literature.bib"
+csl: "../../danielLib/inst/extdata/report.csl"
+output:
+  html_document:
+    toc: true
+    number_sections: true
+    theme: unite
+    css: "../../danielLib/inst/extdata/report.css"
+    highlight: tango
+    df_print: kable
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(knitr)
+library(danielLib)
+
+danielLib::style_setup()
+
+knitr::opts_chunk$set(echo = TRUE)
+opts_knit$set(root.dir = "../../example")
+```
+
+# Overview
+- Totalling 12 fecal samples
+- 7 samples from healthy individuals of the HMP ITS2 cohort (NCBI Bioproject [PRJNA356769](https://www.ncbi.nlm.nih.gov/bioproject/PRJNA356769)) [@Nash2017]
+- 5 samples from cancer patients (ENA study PRJEB33756)
+
+```{r message=FALSE, echo=FALSE}
+samples_tbl <- read_csv("input/samples.csv")
+
+samples_tbl %>%
+  kable(caption = "Meta data file")
+```
+
+# Uploading files
+
+# Setting up parameters
+
+# Acessing the report
+
+# References
