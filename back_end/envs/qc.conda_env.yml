@@ -1,0 +1,15 @@
+name: qc
+channels:
+ - conda-forge
+ - bioconda
+ - r
+ - defaults
+dependencies:
+ - trimmomatic
+ - cutadapt
+ - fastqc
+ - multiqc
+ - bioawk
+ - r-base=3.6.1
+ - r-tidyverse
+ - r-optparse

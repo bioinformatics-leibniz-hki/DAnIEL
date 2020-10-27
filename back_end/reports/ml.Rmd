@@ -1,0 +1,138 @@
+---
+bibliography: references.bib
+csl: references.csl
+output:
+  html_document:
+    theme: null
+    df_print: kable
+params:
+  reports_dir: /sbidata/server/daniel/src/latest/back_end/reports/
+  project_dir: /sbidata/server/daniel/userdat/test_pipits/
+  db_dir: /sbidata/server/daniel/db/
+---
+
+```{r, include=FALSE}
+source("defaults.R")
+
+project <-
+  paste0(params$project_dir, "/input/project.json") %>%
+  jsonlite::read_json(simplifyVector = TRUE)
+
+selected_params <- danielLib::get_selected_params(project)
+
+analysis_params <- project$params$analysis_params[[project$selected_analysis_params]]
+analysis_dir <- paste0(params$project_dir, "/analysis/", stringr::str_replace_all(selected_params$analysis, " ", "_"), "/")
+ml_dir <-  paste0(analysis_dir, "ml/")
+
+fs_methods_l <- list(
+  "train" = "all features used",
+  "sbf" = "selection by filtering",
+  "rfe" = "recursive feature selection"
+)
+
+classifiers_l <- list(
+  "rf" = "random forest",
+  "svmRadial" = "SVM with gaussian kernel"
+)
+
+ml_env <- environment()
+paste0(ml_dir, "ml.RData") %>% load(envir = ml_env)
+
+sbf_ctrl <- ml_env$sbf_ctrl
+rfe_ctrl <- ml_env$rfe_ctrl
+```
+```{r, include=FALSE, eval=ml_env$tested_cols %>% length() > 0}
+models_tbl <-
+  ml_env$models_tbl %>%
+  dplyr::mutate(
+    fs_method = fs_method %>% dplyr::recode(!!!fs_methods_l),
+    clf_method = clf_method %>% dplyr::recode(!!!classifiers_l)
+  )  
+
+best_models_tbl <-
+  models_tbl %>%
+  dplyr::group_by(target) %>%
+  dplyr::arrange(-AUC) %>%
+  dplyr::slice(1)  
+```
+
+
+# Machine Learning
+Machine Learning (ML) is the automated process of using features to build a model able to distinguish between any given classes.
+This model can be used to predict new data sets.
+Furthermore, features which are important in this classification can be identified.
+
+```{rmd, eval=ml_env$tested_cols %>% length() == 0}
+## Results
+
+- No target variable was found to predict any sample attribute
+```
+```{r, eval=ml_env$tested_cols %>% length() == 0}
+knitr::knit_exit()
+```
+
+## Methods
+- Binary target variables: `r {ml_env$binary_cols}`
+- Cross-validation (CV) was used to split the data set into sections for training and validation
+- Nested re-sampling was applied for feature selection and model parameter tuning
+- Feature selection
+```{rmd, eval = fs_methods_l[["sbf"]] %in% models_tbl$fs_method}
+  - Selection by filtering
+    - ANOVA and GAM models were used to select features for discrete and continuous targets, respectively
+    - Resampling used: `r {sbf_ctrl$number}` fold CV
+```
+```{rmd, eval = fs_methods_l[["rfe"]] %in% models_tbl$fs_method}
+  - Recursive feature elimination
+    - Less important features were removed in a iterative way
+    - Less complex models with max. `r {rfe_ctrl$functions$selectSize %>% as.list() %>% pluck("tol")}`% lower AUC were always preferred
+    - Resampling used: `r {rfe_ctrl$number}` fold CV
+```
+- Classification methods used: `r {models_tbl$clf_method %>% unique()}`
+- Area under ROC curve (AUC) was used to validate model performance on held-out folds in binary classification tasks
+
+## Results
+- Totaling `r {models_tbl %>% dim() %>% magrittr::extract(1)}` models were trained
+- Best models according to AUC: `r {best_models_tbl %>% mutate(summary_str = sprintf("model %i (%s, AUC = %.2f) to predict %s", model_id, clf_method, AUC, target)) %>% pluck("summary_str") %>% paste(collapse = ", ")}`
+
+```{r}
+best_models_tbl %>%
+  kable(caption = "Overview about best models")
+```
+
+```{r}
+models_tbl %>%
+  kable(caption = "Overview about all models")
+```
+
+```{r}
+ml_env %>%
+  purrr::pluck("rf_importance_tbl") %>%
+  dplyr::mutate(feature = feature %>% str_remove_all("^`|`$")) %>%
+  dplyr::group_by(target) %>%
+  dplyr::arrange(-MeanDecreaseGini) %>%
+  dplyr::slice(1:5) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(MeanDecreaseGini = formattable::color_bar()(MeanDecreaseGini %>% round(2))) %>%
+  dplyr::select(target, Feature = feature, `Gini Importance` = MeanDecreaseGini) %>%
+  kable(caption = "Most important features") %>%
+  kableExtra::column_spec(column = 3, extra_css = "text-align: right") %>%
+  kableExtra::collapse_rows(1)
+```
+
+## Notes
+- Feature importance does not imply biological relevance
+  - Suggestions
+    - Use importance features only as suggestions for hypothesis building
+    - Validate these features in the wet lab
+
+- Over-fitting might occur
+  - Reasons
+    - Many models can have more tunable parameter than there are samples to train
+    - This drastically reduces the number of replica
+  - Implications
+    - Model might not generalize well in new data sets
+    - Features might get selected which are only important in this specific subset
+  - Suggestions
+    - Use robust models (e.g. random forest)
+    - Use a *representative* cohort
+    - Increase sample size

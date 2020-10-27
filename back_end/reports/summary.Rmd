@@ -1,0 +1,238 @@
+---
+bibliography: references.bib
+csl: references.csl
+output:
+  html_document:
+    theme: null
+    df_print: kable
+params:
+  reports_dir: /sbidata/server/daniel/src/dev/back_end/reports/
+  project_dir: /sbidata/server/daniel/userdat/example
+  db_dir: /sbidata/server/daniel/db
+---
+
+```{r, include=FALSE}
+source("defaults.R")
+
+project <-
+  paste0(params$project_dir, "/input/project.json") %>%
+  jsonlite::read_json(simplifyVector = TRUE)
+
+selected_params <- danielLib::get_selected_params(project)
+
+analysis_dir <- paste0(params$project_dir, "/analysis/", stringr::str_replace_all(selected_params$analysis, " ", "_"), "/")
+statistics_dir <- paste0(analysis_dir, "statistics/")
+correlation_dir <- paste0(analysis_dir, "correlation/")
+
+analysis_params <- project$params$analysis_params[[selected_params$analysis]]
+features_params <- project$params$features_params[[selected_params$features]]
+
+pval_max <- analysis_params$max_pvalue
+
+stat_tbl <-
+  paste0(statistics_dir, "stat.csv") %>%
+  readr::read_csv()
+
+findings_tbl <- tibble::tibble()
+```
+
+```{r, include=FALSE, eval=stat_tbl %>% nrow() > 0}
+stat_tbl <-
+  stat_tbl %>%
+  dplyr::mutate(relationship_type = "statistics") %>%
+  dplyr::select(
+    feature, relationship_type,
+    interaction_method = method, interaction = group_var,
+    effsize_unit, effsize_value, p_value = p.value
+  )
+findings_tbl <-
+  findings_tbl %>%
+  dplyr::bind_rows(stat_tbl)
+```
+
+```{r, eval=paste0(correlation_dir, "/*/results.csv") %>% Sys.glob() %>% length() > 0}
+cor_tbl <-
+  paste0(correlation_dir, "/*/results.csv") %>%
+  Sys.glob() %>%
+  purrr::map(readr::read_csv) %>%
+  bind_rows() %>%
+  transmute(
+    feature_a = feature_a,
+    feature_b = feature_b,
+    effsize_unit = analysis_params$correlation_method,
+    effsize_value = cor,
+    p_value = p_value
+  )
+
+cor_tbl <-
+  dplyr::bind_rows(
+    # inflate pairwise interactions
+    cor_tbl %>% rename(feature = feature_a, interaction = feature_b),
+    cor_tbl %>% rename(feature = feature_b, interaction = feature_a)
+  ) %>%
+  dplyr::mutate(relationship_type = "correlation", interaction_method = "sparcc")
+
+findings_tbl <-
+  findings_tbl %>%
+  dplyr::bind_rows(cor_tbl)
+```
+
+```{r, eval=findings_tbl %>% nrow() > 0}
+findings_tbl <-
+  findings_tbl %>%
+  dplyr::select(feature, relationship_type, interaction_method, interaction, effsize_unit, effsize_value, p_value) %>%
+  dplyr::filter(p_value <= pval_max)
+
+#
+# annotate interactions
+#
+
+findings_features <-
+  findings_tbl %>%
+  pull(feature) %>%
+  unique()
+
+lineage_tbl <-
+  paste0(params$db_dir, "/phylogenies/index_fungorum_2016/taxonomy.csv.gz") %>%
+  readr::read_csv()
+
+mesh_link <- function(mesh_id) {
+  if (is.na(mesh_id)) {
+    return("")
+  }
+
+  shiny::tags$a(href = sprintf("https://id.nlm.nih.gov/mesh/%s.html", mesh_id), "MeSH")
+}
+
+daniel_db_con <-
+  paste0(params$db_dir, "/daniel_db/daniel_db.sqlite") %>%
+  DBI::dbConnect(RSQLite::SQLite(), .)
+
+interactions_tbl <-
+  daniel_db_con %>%
+  DBI::dbReadTable("interactions") %>%
+  tibble::as_tibble() %>%
+  dplyr::rename(species = fungus) %>%
+  dplyr::inner_join(lineage_tbl) %>%
+  dplyr::mutate(feature = !!as.name(features_params$taxonomic_rank)) %>%
+  dplyr::rename(relationship_type = interaction_type) %>%
+  dplyr::filter(feature %in% findings_features) %>%
+  dplyr::rowwise() %>%
+  dplyr::mutate(
+    interaction = paste(
+      relationship_type %>% str_replace_na(""),
+      "interaction between",
+      shiny::tags$i(species),
+      "and",
+      partner %>% stringr::str_replace_na(""),
+      comment %>% stringr::str_replace_na(""),
+      paste0(
+      "(",
+      shiny::tags$a(href = paste0("https://www.ncbi.nlm.nih.gov/pubmed/?term=", pubmed_id), "Reference"),
+      ifelse(is.na(partner_mesh_id), "", paste0(", ", partner_mesh_id %>% mesh_link())),
+      ")" 
+      )
+    ),
+    relationship_type = "interactions_db"
+  ) %>%
+  dplyr::select(feature, relationship_type, interaction)
+
+infections_tbl <-
+  daniel_db_con %>%
+  DBI::dbReadTable("infections") %>%
+  tibble::as_tibble() %>%
+  dplyr::inner_join(lineage_tbl, by = "species") %>%
+  dplyr::mutate(feature = !!as.name(features_params$taxonomic_rank)) %>%
+  dplyr::filter(feature %in% findings_features) %>%
+  dplyr::transmute(
+    feature = feature,
+    relationship_type = "infections_db",
+    interaction = sprintf("<i>%s</i> was found in %s", species, source)
+  )
+
+findings_tbl <-
+  findings_tbl %>%
+  dplyr::full_join(interactions_tbl) %>%
+  dplyr::full_join(infections_tbl)
+
+findings_tbl %>%
+  readr::write_csv(paste0(analysis_dir, "summary/findings.csv"))
+```
+
+# Summary
+Here, significant results from all tests are combined.
+Furthermore, significant features were annotated with known interactions and clinical isolates.
+
+```{rmd, eval=findings_tbl %>% nrow() == 0}
+## Results
+
+- No feature could be annotated due to lacking statsitical tests and correlation networks
+```
+
+```{r, eval=findings_tbl %>% nrow() == 0}
+findings_tbl %>%
+  readr::write_csv(paste0(analysis_dir, "summary/findings.csv"))
+knitr::knit_exit()
+```
+
+## Methods
+DAnIEL ITS pipeline was run to analyze these relationships of fungal features:
+
+- Statistics: Fungal features significantly differentially abundant in sample groups
+- Correlation networks: Fungal features significantly correlated to other fungal features
+- Literature annotation: Known interactions using a manually curated literature abstract database
+- Clinical annotation: Species found in clinical isolates with suspicious fungal infections in the [NRZMyk](https://www.nrz-myk.de/home.html) reference database
+    
+## Results
+```{r}
+summary_html <- function(findings_tbl, relationship_type) {
+  switch(relationship_type,
+    "correlation" = {
+      findings_tbl %>%
+        dplyr::mutate(interaction = sprintf("<i>%s</i>", interaction)) %>%
+        dplyr::mutate(relationship_html = sprintf("<li><i>%s</i> (%s, p=%.2e)</li>", interaction, effsize_unit, p_value)) %>%
+        dplyr::pull(relationship_html) %>%
+        paste(collapse = " ") %>%
+        paste0("Significantly correlated with: <br> <ul>", ., "</ul>")
+    },
+    "statistics" = {
+      findings_tbl %>%
+        dplyr::mutate(relationship_html = sprintf("<li>%s (%s, p=%.2e)</li>", interaction, interaction_method, p_value)) %>%
+        dplyr::pull(relationship_html) %>%
+        paste(collapse = " ") %>%
+        paste0("Significantly differentially abundant in: <br> <ul>", ., "</ul>")
+    },
+    "interactions_db" = {
+      findings_tbl %>%
+        dplyr::mutate(relationship_html = sprintf("<li>%s</li>", interaction)) %>%
+        dplyr::pull(relationship_html) %>%
+        paste(collapse = " ") %>%
+        paste0("Known interactions from literature: <br> <ul>", ., "</ul>")
+    },
+    "infections_db" = {
+      findings_tbl %>%
+        dplyr::mutate(relationship_html = sprintf("<li>%s</li>", interaction)) %>%
+        dplyr::pull(relationship_html) %>%
+        paste(collapse = " ") %>%
+        paste0("Clinical isolates with suspicious fungal infections: <br> <ul>", ., "</ul>")
+    },
+    paste0(relationship_type, " not yet implemented.")
+  )
+}
+  
+findings_summary_tbl <-
+  findings_tbl %>%
+  dplyr::group_by(feature, relationship_type) %>%
+  tidyr::nest() %>%
+  dplyr::mutate(
+    summary_html = purrr::pmap_chr(list(data, relationship_type), summary_html)
+  )
+
+findings_summary_tbl %>%
+  dplyr::group_by(feature) %>%
+  dplyr::summarise(
+    feature_summary_html = paste(summary_html, collapse = "<br>") %>% paste(sprintf("<h3><i>%s</i></h3>", feature %>% first()), .)
+  ) %>%
+  pull(feature_summary_html) %>%
+  shiny::HTML()
+```

@@ -1,0 +1,43 @@
+channels:
+ - conda-forge
+ - bioconda
+ - r
+ - defaults
+dependencies:
+ - bioawk
+ - bioconductor-complexheatmap
+ - bioconductor-dada2
+ - bioconductor-genomeinfodb
+ - bioconductor-ggtree
+ - bioconductor-phyloseq
+ - bioconductor-shortread
+ - bioconductor-treeio
+ - jsonschema
+ - pandas
+ - python=3.6
+ - r-ape
+ - r-base=3.6.1
+ - r-devtools
+ - r-formattable
+ - r-ggiraph
+ - r-ggraph 
+ - r-ggsci
+ - r-kableextra
+ - r-metacoder
+ - r-optparse
+ - r-plotroc
+ - r-proc
+ - r-ggpubr
+ - r-rmarkdown
+ - r-tidygraph
+ - r-tidyverse
+ - r-tidyverse=1.2.1
+ - r-vegan
+ - r-visnetwork
+ - r-xml
+ - r-rsqlite
+ - r-dbi
+ - r-dunn.test
+ - snakemake=5.7
+
+name: base

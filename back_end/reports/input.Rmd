@@ -1,0 +1,77 @@
+---
+bibliography: references.bib
+csl: references.csl
+output:
+  html_document:
+    theme: null
+    df_print: kable   
+params:
+  reports_dir: /sbidata/server/daniel/src/back_end/reports/
+  project_dir: /sbidata/server/daniel/userdat/test_example/
+  db_dir: /sbidata/server/daniel/db/
+---
+
+```{r, include=FALSE}
+source("defaults.R")
+
+project <-
+  paste0(params$project_dir, "/input/project.json") %>%
+  jsonlite::read_json(simplifyVector = TRUE)
+
+input_params <- project$input
+
+input_dir <- paste0(params$project_dir, "/input/")
+
+samples_tbl <-
+  base::paste0(params$project_dir, "/input/samples.csv") %>%
+  danielLib::read_csv_guess_coltypes() %>%
+  dplyr::group_by(sample_id)
+
+reads_checksums_tbl <-
+  base::paste0(params$project_dir, "/input/reads/checksums.csv") %>%
+  readr::read_csv()
+```
+
+# Input
+
+- Uploaded samples: `r {input_params$local_samples}`
+- Integrated existing projects
+  - Studies: `r {input_params$projects$projects}`
+  - Query used to filter these samples: `r {input_params$projects$filter_query}`
+  - Samples: `r {input_params$projects$samples}`
+- Integrated NCBI SRA run ids: `r {input_params$sra_ids}`
+- Samples selected for demultiplexing: `r {input_params$muxed_samples}`
+- Only samples occurring in the samples meta data table were considered for downstream analysis
+
+```{r}
+samples_tbl %>%
+  kable(caption = "Sample meta data") %>%
+  kable_styling() %>%
+  scroll_box(height = "500px")
+```
+
+```{r}
+samples_tbl %>%
+  dplyr::ungroup() %>%
+  dplyr::select_if(is.factor) %>%
+  tidyr::gather(k, v) %>%
+  ggplot2::ggplot(aes(v)) +
+  ggplot2::geom_bar() +
+  ggplot2::coord_flip() +
+  ggplot2::facet_wrap(~k, scales = "free_y") +
+  ggplot2::labs(x = "", y = "Samples count")
+```
+
+```{r, fig.cap="MD5 checksums of raw read files"}
+reads_checksums_tbl %>%
+  dplyr::mutate(
+    file_prefix = file %>% stringr::str_remove("_(1|2)\\.raw\\.fq\\.gz$"),
+    mate = file %>% stringr::str_extract("(1|2)\\.raw\\.fq\\.gz")
+  ) %>%
+  dplyr::select(`File prefix` = file_prefix, mate, md5sum) %>%
+  dplyr::mutate(md5sum = md5sum %>% cell_spec(monospace = TRUE)) %>%
+  tidyr::spread(mate, md5sum) %>%
+  kable(caption = "MD5 checksums of raw read files") %>%
+  kable_styling() %>%
+  scroll_box(height = "500px")
+```

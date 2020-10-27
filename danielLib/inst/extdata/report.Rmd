@@ -1,0 +1,535 @@
+---
+title: "<img src='report_header.png' class='titleImage' alt='DAnIEL logo'>"
+pagetitle: "DAnIEL ITS report"
+bibliography: "literature.bib"
+csl: "report.csl"
+output:
+  html_document:
+    toc: true
+    theme: unite
+    css: report.css
+    highlight: tango
+    df_print: kable
+params:
+    project_dir: "~/prj/6-its-web-server/userdat/poster"
+    report_placehodler_csv: "report.csv"
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(kableExtra)
+library(tidyverse)
+library(jsonlite)
+library(slickR)
+library(svglite)
+library(ggpubr)
+library(formattable)
+library(danielLib)
+library(ggsci)
+library(visNetwork)
+
+knitr::opts_knit$set(
+  root.dir = "~/prj/6-its-web-server/userdat/poster/"
+)
+
+knitr::opts_chunk$set(
+  echo = FALSE,
+  comment = NA,
+  out.width = "800px"
+)
+
+base::options(
+  knitr.table.format = "html",
+  knitr.kable.NA = " ",
+  warn = -1
+)
+
+danielLib::style_setup()
+
+# load data
+project <-
+  base::paste0(params$project_dir, "/input/project.json") %>%
+  jsonlite::read_json(simplifyVector = TRUE)
+
+input_params <- project$input
+qc_params <- project$params$qc_params[[project$selected_params$qc]]
+denoising_params <- project$params$denoising_params[[project$selected_params$denoising]]
+phylotyping_prams <- project$params$phylotyping_params[[project$selected_params$phylotyping]]
+features_params <- project$params$features_params[[project$selected_params$features]]
+analysis_params <- project$params$analysis_params[[project$selected_params$analysis]]
+
+samples_tbl <-
+  base::paste0(params$project_dir, "/input/samples.csv") %>%
+  read_csv_guess_factor_cols() %>%
+  dplyr::group_by(sample_id)
+
+reads_checksums_tbl <-
+  base::paste0(params$project_dir, "/input/reads/checksums.csv") %>%
+  readr::read_csv()
+
+
+stat_results_tbl <-
+  paste(
+    params$project_dir,
+    "analysis",
+    project$selected_params$analysis %>% str_replace_all(" ", "_"),
+    "stat.csv",
+    sep = "/"
+  ) %>%
+  readr::read_csv()
+
+# redefinitions for debugging
+# project$selected_params$features <- "Genus low prev"
+
+cor_results_tbl <-
+  paste(
+    params$project_dir,
+    "analysis",
+    project$selected_params$analysis %>% str_replace_all(" ", "_"),
+    "correlation/results.csv",
+    sep = "/"
+  ) %>%
+  readr::read_csv() %>%
+  dplyr::filter(p_value < 0.05)
+
+feature_tbl <-
+  paste(
+    params$project_dir,
+    "features",
+    project$selected_params$features %>% str_replace_all(" ", "_"),
+    "features.csv",
+    sep = "/"
+  ) %>%
+  readr::read_csv()
+
+feature_meta_tbl <-
+  paste(
+    params$project_dir,
+    "features",
+    project$selected_params$features %>% str_replace_all(" ", "_"),
+    "features.meta.csv",
+    sep = "/"
+  ) %>%
+  readr::read_csv()
+
+features_phy <-
+  paste(
+    params$project_dir,
+    "features",
+    project$selected_params$features %>% str_replace_all(" ", "_"),
+    "phyloseq.rds",
+    sep = "/"
+  ) %>%
+  readr::read_rds()
+
+paste(
+    params$project_dir,
+    "analysis",
+    project$selected_params$analysis %>% str_replace_all(" ", "_"),
+    "ml.RData",
+    sep = "/"
+  ) %>%
+  attach()
+
+group <-
+  samples_tbl %>%
+  base::sapply(class) %>%
+  base::grep(pattern = "factor", value = TRUE) %>%
+  base::names() %>%
+  magrittr::extract2(1)
+
+# load annotation data
+ref_database <-
+  readr::read_csv("~/prj/6-its-web-server/db/reference_db/db.csv") %>%
+  dplyr::filter(id == phylotyping_prams$ref_database) %>%
+  as.list()
+
+# modify for debugging
+input_params$projects <- c("HMP", "ICU")
+
+# The report includes some chunks only if the corresponding analysis method was performed
+# This is done using conditional R markdown chunks with the asis engine (as is)
+# This engine, however, obviously do not support the execution of R code inside that chunk
+# Therefore, dynamic variables inside these chunks are reported as placeholders {{name}}
+# This placeholders have to be replaced in post production
+
+# evaluate values for placeholders {{...}} in asis chunks
+list(
+  "added_projects_count" = input_params$projects %>% length(),
+  "added_projects" = input_params$projects %>% paste(collapse = ", "),
+  "excluded_sample_criteria" = qc_params$qc_exclusion_criteria %>% paste(collapse = ", "),
+  "ref_database_name" = ref_database$name,
+  "meta_data_groups" = samples_tbl %>% sapply(class) %>% as.list() %>% purrr::keep(function(x) x == "factor") %>% names() %>% paste(collapse = ", "),
+  "blast_identity_percent" = phylotyping_prams$frac_identity * 100
+) %>%
+  as_tibble() %>%
+  gather(placeholder, value) %>%
+  write_csv(params$report_placehodler_csv)
+```
+
+# Reproducibility statement
+
+```{r}
+list(
+  `Version of DAnIEL web server` = project$version,
+  `Start time of pipeline` = project$start_datetime,
+  `End time of pipeline` = format(Sys.time(), "%a %b %d %H:%M:%S %Y"),
+  `User ID` = project$user,
+  `MD5 checksum of input json` =
+    paste0("md5sum ", project$project_dir, "/input/project.json") %>%
+      system(intern = TRUE) %>%
+      str_split(" ") %>%
+      purrr::flatten() %>%
+      magrittr::extract2(1)
+) %>%
+  as_tibble() %>%
+  gather(Variable, Value) %>%
+  kable()
+```
+
+- MD5 checksum of each uploaded read file was calculated to ensure file integrity
+
+```{r}
+reads_checksums_tbl %>%
+  kable() %>%
+  column_spec(2, monospace = TRUE) %>%
+  scroll_box()
+
+# tidyr::separate(file, c("sample", "mate")) %>%
+# tidyr::spread(mate, md5sum) %>%
+# magrittr::set_colnames(c("sample_id", "md5sum _1.raw.fq.gz", "md5sum _1.raw.fq.gz"))
+```
+
+# Material and methods
+
+```{r, fig.cap="Meta data table"}
+samples_tbl %>%
+  kable() %>%
+  scroll_box()
+```
+```{r, fig.cap="Number of samples grouped by any categrial variable to illustrate balance of the data set"}
+samples_tbl %>%
+  dplyr::ungroup() %>%
+  dplyr::select_if(is.factor) %>%
+  tidyr::gather(k, v) %>%
+  ggplot2::ggplot(aes(v)) +
+  ggplot2::geom_bar() +
+  ggplot2::coord_flip() +
+  ggplot2::facet_wrap(~k, scales = "free_y") +
+  ggplot2::labs(x = "", y = "Samples count")
+```
+
+## Samples
+- `r denoising_params$its_region` amplicons of N = `r samples_tbl$sample_id %>% base::unique() %>% base::length()` samples were sequenced
+- FASTQ files were uploaded to DAnIEL web server
+```{asis, eval = samples_tbl %>% sapply(class) %>% as.list() %>% purrr::keep(function(x) x == "factor") %>% length() > 0}
+- The cohort was grouped into: {{meta_data_groups}}
+```
+```{asis, eval = !(input_params$sra_ids %>% is_empty()), echo = TRUE}
+- The cohort was enriched by `r input_params$sra_ids %>% base::length()` samples from the [Sequence Read Archive](https://www.ncbi.nlm.nih.gov/sra)
+```
+```{asis, eval =  !(input_params$projects %>% is_empty()), echo = TRUE}
+- The cohort was enriched by {{added_projects_count}} projects from the DAnIEL repository of preprocessed projects, namely: {{added_projects}}.
+```
+
+## Quality Control
+- Trimmomatic was used to filter high error reads and to trim adapters and primers [@Bolger2014]
+```{asis, eval = qc_params$qc_exclusion_criteria %>% length() > 0, echo = TRUE}
+- Samples failed any of these QC criteria were excluded: {{excluded_sample_criteria}}
+```
+
+## Denoising
+```{asis, eval = denoising_params$denoising_method == "asv_dada2", echo = TRUE}
+- DADA2 was used to retrieve amplicon sequence variants (ASV) from quality controlled reads [@Callahan2016]
+```
+```{asis, eval = denoising_params$denoising_method == "otu_pipits", echo = TRUE}
+- PIPITS was used to retrieve operational taxonomic units (OTU) from quality controlled reads [@Gweon2015]
+```
+- Singletons were `r {denoising_params$include_singletons %>% ifelse("", "not")}` included.
+
+## Phylotyping
+```{asis, eval = grepl(ref_database$id, pattern = "unite"), echo = TRUE}
+- {{ref_database_name}} database was used for phylotyping [@Nilsson2019]
+```
+```{asis, eval = is_empty(ref_database$id), echo = TRUE}
+- {{ref_database_name}} database was used for phylotyping
+```
+```{asis, eval = phylotyping_prams$sequence_classifier == "qiime2_blast", echo = TRUE}
+- Qiime2 BLAST consensus classifier was used for taxonomic classification of denoised sequences [@Bolyen2019]
+- An identity threshold of {{blast_identity_percent}}% was applied
+```
+```{asis, eval = phylotyping_prams$sequence_classifier == "qiime2_nb", echo = TRUE}
+- Qiime2 Naive Bayes classifier was used for taxonomic classification of denoised sequences [@Bolyen2019]
+```
+
+## Normalization and Filtering
+- Hits of denoised sequences were summed up to the `r {features_params$taxonomic_rank}` rank
+- Prevalence filtering: All taxa must be abundant at least `r {features_params$min_abundance}`% in at least `r {features_params$min_prevalence}`% of all samples.
+- `r {features_params$normalization_method %>% plyr::mapvalues(c("clr", "tss"), c("Centered log ratio", "Total sum scaling"))}` was the default normalization
+
+# Results
+
+## Abundance
+- Clustermap of normalized abundances was created using Spearman correlation distance
+
+```{r, warning=FALSE, fig.cap="Normalized feature abundances clustered by Spearman correlation"}
+abundance_clustermap(feature_tbl, features_params$taxonomic_rank, features_params$normalization_method)
+```
+
+## Alpha diversity
+- `r {feature_tbl %>% colnames() %>% setdiff("sample_id") %>% length()}` distinct features were found
+
+## Beta diversity
+```{r, warning=FALSE}
+features_ord <- ordination(features_phy = features_phy, group = group)
+
+features_ord_pval_text <-
+  sprintf("%.1e", features_ord$adonis_p_value) %>%
+  str_replace("e", "*10<sup>") %>%
+  paste0("</sup>")
+
+features_ord_significance_text <-
+  ifelse(
+    test = features_ord$adonis_p_value < 0.05,
+    yes = {
+      paste0(
+        "significant (Adonis PERMANOVA, p <",
+        features_ord_pval_text,
+        ")"
+      )
+    },
+    no = sprintf("not significant (p = %s)", features_ord_pval_text)
+  )
+```
+
+- Samples were grouped by `r {group}`
+- Total counts of non chimeric reads were used to calculate all pairwise Bray-Curtis distances between the samples
+- Principal Coordinates Analysis was used for 2D Visualization
+- Grouping by `r {group}` was `r {features_ord_significance_text}`
+```{r, warning=FALSE, fig.cap="Ordination Biplot using PCoA and Bray-Curtis metric"}
+features_ord$plot
+```
+
+## Taxon correlation network
+```{asis, eval = analysis_params$inter_species_correlation_method == "sparcc", echo = TRUE}
+- Pairwise correlations were calculated using SparCC [@Friedman2012; @Watts2019]
+- Pseudo p values were calculated using 100 bootstraps which 100 iterations each
+```
+
+- Correlations were filtered by significance (p < 0.05)
+- P values were adjusted for false discovery rate to yield q values
+- Nodes were colored by order of the taxon
+
+```{r} 
+interactive_correlation_network(cor_results_tbl, feature_meta_tbl, color_rank = "order")
+```
+
+```{r}
+cor_method_footnote <-
+  analysis_params$inter_species_correlation_method %>%
+  sprintf("strength of %s correlation [-1; 1]", .)
+cor_results_tbl %>%
+  select(
+    `Feature A` = feature_a,
+    `Feature B` = feature_b,
+    `coefficient ρ¹` = cor,
+    `p value` = `p_value`,
+    `q value²` = `q_value`
+  ) %>%
+  kable(caption = "Significant pairwise correlations") %>%
+  kableExtra::footnote(
+    number = c(cor_method_footnote, "FDR adjusted p value")
+  )
+```
+
+
+## Statistics
+
+### Two group comparisons
+- wilcoxon test
+
+```{r, warning=FALSE}
+stat_results_tbl %>%
+  dplyr::filter(test_type == "two groups" & !is.na(p.value)) %>%
+  dplyr::mutate(
+    group_var = group_var %>%
+      kableExtra::cell_spec(
+        format = "HTML",
+        tooltip = sample_ids %>% str_replace_all(",", ", ") %>% paste0("Samples used:", .) %>% paste0(group_counts, "\n", .)
+      )
+  ) %>%
+  dplyr::select(
+    Grouping = `group_var`, Feature = feature,
+    `Paired test` = paired, `p value` = p.value, `q value` = q.value,
+    `Cliff's Delta`, `Log2 FC`, `higher in` = higher.in
+  ) %>%
+  kable(caption = "Two groups comparisons")
+```
+
+### Multiple groups comparisons
+
+- Kruskal-Wallis rank sum test, FDR adjusted for multiple features
+- post hoc test: Dunn's Test, FDR adjsuted for multiple grouping values
+- exact p values can't be calculated due to ties in zero inflated data
+
+```{r, warning=FALSE}
+stat_results_tbl %>%
+  dplyr::filter(test_type == "pre one way AOV" & p.value < 0.05) %>%
+  dplyr::arrange(feature) %>%
+  select(
+    Variable = `group_var`, Feature = feature,
+    `p value` = p.value, `q value` = q.value
+  ) %>%
+  kable(caption = "Pre hoc tests")
+```
+
+
+```{r, warning=FALSE}
+post_stat_results_tbl <-
+  stat_results_tbl %>%
+  dplyr::filter(test_type == "post one way AOV" & p.value < 0.05)
+
+post_stat_results_tbl %>%
+  dplyr::arrange(feature) %>%
+  select(
+    Variable = `group_var`, Feature = feature, `Group A` = group_a, `Group B` = group_b, `higher in` = higher.in,
+    `p value` = p.value, `q value` = q.value, `Cliff's Delta`, `Log2 FC`
+  ) %>%
+  kable(caption = "Post hoc tests") %>%
+  collapse_rows(columns = 1:2)
+```
+
+```{r, fig.cap="Differentially abundant features"}
+# TODO: paired info and adapt p value threshold
+post_stat_results_tbl %>%
+  dplyr::pull(feature) %>%
+  base::unique() %>%
+  lapply(function(current_feature) {
+    svglite::xmlSVG(
+      code = {
+        show(
+          danielLib::post_hoc_box_plot(feature_tbl, post_stat_results_tbl, current_feature, "cohort")
+        )
+      },
+      standalone = TRUE
+    )
+  }) %>%
+  sapply(function(sv) {
+    paste0("data:image/svg+xml;utf8,", as.character(sv))
+  }) %>%
+  gsub("#", "%23", .) %>%
+  slickR(height = 450, slideId = "diff_features")
+```
+
+<!-- ```{r} -->
+<!-- library(stringr) -->
+<!-- library(bsselectR) -->
+
+<!-- state_plots <- paste0(list.files("plots", full.names = TRUE)) -->
+<!-- names(state_plots) <- str_replace_all(state_plots, -->
+<!--                                       c("\\.png" = "", -->
+<!--                                         "plots/" = "")) -->
+
+<!-- bsselect(state_plots, type = "img", selected = "Oregon", -->
+<!--          live_search = TRUE, show_tick = TRUE) -->
+<!-- ``` -->
+
+## Machine learning
+
+- Machine learning aims to build a model which predicts a property of the sample based on the features profiled
+- `r  models_tbl %>% base::nrow()` models were trained
+- Feature selection using ANOVA filtering was performed on `r  models_tbl %>% dplyr::filter(fs_method == "sbf") %>% base::nrow()` models
+- Models were evaluated using nested Cross-validation
+- Area Under Curve (AUC) of Receiver Operating Characteristic (ROC) was calculated using all resamplings combined for all binary target classes
+
+```{r}
+models_tbl %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(
+    AUC = AUC %>% color_tile(),
+    Sens = Sens %>% color_tile(),
+    Spec = Spec %>% color_tile()
+  ) %>%
+  dplyr::select(target, model_id, fs_method, n_features, clf_method, params, AUC, Sens, Spec) %>%
+  dplyr::rename(`Feature selection`= fs_method, `Features used` = n_features, `Classifier` = clf_method,
+    `Parameters` = params, `AUC¹` = AUC, `Sens¹` = Sens, `Spec¹` = Spec) %>%
+  kable(caption = "trained models") %>%
+  kableExtra::collapse_rows(1) %>%
+  kableExtra::footnote(number = "Best tuned models averaged over all resamples")
+```
+
+```{r, error=FALSE, fig.cap="Model performance valuation using ROC"}
+# TODO: paired info and adapt p value threshold
+ml_res_tbl %>%
+  dplyr::filter(type == "binary classification") %>%
+  dplyr::arrange(model_id) %>%
+  purrr::transpose() %>%
+  lapply(function(x) {
+    svglite::xmlSVG(
+      code = {
+        show(
+          roc_plot(x$fs_obj) +
+            labs(
+              title = sprintf("ROC of model %d", x$model_id),
+              subtitle = sprintf("Target: %s, Classifier = %s\nFeature selection: %s", x$target, x$clf_method, x$fs_method)
+            )
+        )
+      },
+      standalone = TRUE
+    )
+  }) %>%
+  sapply(function(sv) {
+    paste0("data:image/svg+xml;utf8,", as.character(sv))
+  }) %>%
+  gsub("#", "%23", .) %>%
+  slickR(height = 450, slideId = "roc_pooled")
+```
+
+```{r, error=FALSE, fig.cap="Model performance valuation using ROC"}
+# TODO: paired info and adapt p value threshold
+ml_res_tbl %>%
+  dplyr::filter(type == "binary classification") %>%
+  dplyr::arrange(model_id) %>%
+  purrr::transpose() %>%
+  lapply(function(x) {
+    svglite::xmlSVG(
+      code = {
+        show(
+          roc_plot(x$fs_obj, folds = TRUE) +
+            labs(
+              title = sprintf("ROC of model %d", x$model_id),
+              subtitle = sprintf("Target: %s, Classifier = %s\nFeature selection: %s", x$target, x$clf_method, x$fs_method)
+            )
+        )
+      },
+      standalone = TRUE
+    )
+  }) %>%
+  sapply(function(sv) {
+    paste0("data:image/svg+xml;utf8,", as.character(sv))
+  }) %>%
+  gsub("#", "%23", .) %>%
+  slickR(height = 450, slideId = "roc_folds")
+```
+
+### Important features
+
+- Mean Gini decrease was calculated in random forest models `r {rf_importance_tbl$model_id %>% unique() %>% sort() %>% paste(collapse = ", ")}`
+- These are potential biomarkers in predicting potential properties of the sample
+
+```{r}
+rf_importance_tbl %>%
+  dplyr::group_by(target) %>%
+  dplyr::arrange(-MeanDecreaseGini) %>%
+  dplyr::slice(1:5) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(MeanDecreaseGini = color_bar()(MeanDecreaseGini %>% round(2))) %>%
+  dplyr::select(target, Feature = feature, `Gini Importance` = MeanDecreaseGini) %>%
+  kable(caption = "Most important features (max N=5) to classify sample target") %>%
+  kableExtra::column_spec(column = 3, extra_css = "text-align: right") %>%
+  collapse_rows(1)
+```
+
+
+
+# References

@@ -1,0 +1,149 @@
+---
+bibliography: references.bib
+csl: references.csl
+output:
+  html_document:
+    theme: null
+    df_print: kable
+params:
+  reports_dir: /sbidata/server/daniel/src/latest/back_end/reports/
+  project_dir: /sbidata/server/daniel/userdat/agp75/
+  db_dir: /sbidata/server/daniel/db/
+---
+
+```{r, include=FALSE}
+source("defaults.R")
+
+project <-
+  paste0(params$project_dir, "/input/project.json") %>%
+  jsonlite::read_json(simplifyVector = TRUE)
+
+selected_params <- danielLib::get_selected_params(project)
+
+qc_params <- project$params$qc_params[[selected_params$qc]]
+qc_dir <- paste0(params$project_dir, "/qc/", stringr::str_replace_all(selected_params$qc, " ", "_"), "/")
+
+qc_test_colnames <- c(
+  "basic_statistics", "per_base_sequence_quality", "per_sequence_quality_scores",
+  "per_base_sequence_content", "per_sequence_gc_content", "per_base_n_content",
+  "sequence_length_distribution", "sequence_duplication_levels", "overrepresented_sequences",
+  "adapter_content", "per_tile_sequence_quality"
+)
+
+read_tsv_multiqc <- function(tsv_path) {
+  tsv_path %>%
+    readr::read_tsv() %>%
+    dplyr::select(
+      Sample,
+      read_count = `Total Sequences`,
+      dedup_perc = `total_deduplicated_percentage`,
+      qc_perc = `%GC`,
+      # not all colnames might be present
+      intersect(colnames(.), qc_test_colnames)
+    ) %>%
+    dplyr::mutate(
+      sample_id = Sample %>% stringr::str_remove("_[12]\\.(raw|qc)$"),
+      mate = Sample %>% stringr::str_extract("_[12]\\.(raw|qc)$") %>% stringr::str_extract("[12]") %>% dplyr::recode("1" = "Forward", "2" = "Reverse")
+    ) %>%
+    dplyr::select(-Sample) %>%
+    tidyr::gather(test_name, test_result, intersect(colnames(.), qc_test_colnames))
+}
+
+qc_tbl <-
+  list(
+    "Raw" = paste0(qc_dir, "/before/multiqc_report_data/multiqc_fastqc.txt"),
+    "QC" = paste0(qc_dir, "/after/multiqc_report_data/multiqc_fastqc.txt")
+  ) %>%
+  purrr::map(read_tsv_multiqc) %>%
+  purrr::map2(names(.), ~ dplyr::mutate(.x, qc_step = .y)) %>%
+  purrr::reduce(bind_rows)
+
+read_loss_tbl <-
+  qc_tbl %>%
+  dplyr::select(qc_step, sample_id, mate, read_count) %>%
+  dplyr::distinct() %>%
+  tidyr::spread(qc_step, read_count) %>%
+  dplyr::transmute(sample_id, read_loss_perc = (Raw - QC) / Raw * 100)
+
+excluded_samples_tbl <-
+  paste0(qc_dir, "/final/excluded_samples.csv") %>%
+  danielLib::read_csv_guess_coltypes()
+```
+
+# Quality Control
+
+Quality Control (QC) is the process of removing low quality bases from the raw reads.
+This is done by utilizing the Phred quality score as calculated during base calling.
+Furthermore, primer and adapter sequences are cut.
+
+## Methods
+- Cutadapt was used to trim adapter and primer sequences [@martin2011cutadapt]
+  - Adapter files used for trimming: `r {qc_params$additional_adapter_files}`
+  - Additional sequences (e.g. primers) used for trimming: `r {qc_params$adapter_fasta}`
+  - The reverse complement of these sequences were `r {qc_params$include_revcomp_primers %>% ifelse("", "not")}` included
+  - Phred score format `r {qc_params$phred_format}` was defined
+  - Minimum Phred score was `r {qc_params$min_quality_leading}` for leading and `r {qc_params$min_quality_trailing}` for trailing bases
+  - Minimum read length was `r {qc_params$min_read_length}`nt
+- Samples fitting any of these criteria were excluded from downstream analysis: `r {qc_params$qc_exclusion_criteria %>% magrittr::inset("min_qc_read_count_failed", sprintf("min qc reads < %d", qc_params$min_qc_read_count)) %>% str_replace_all("_", " ")}`. FastQC was used to evaluate the tests.
+- MultiQC was used to combine QC results from all samples [@pmid27312411]
+
+## Results
+
+- `r {excluded_samples_tbl$sample_id %>% unique() %>% length()}` samples were excluded during QC, namely: `r {excluded_samples_tbl$sample_id %>% unique()}`
+- Read loss during QC ranged `r {read_loss_tbl$read_loss_perc %>% summary_text(num_fmt = ".1f", percentage = TRUE)}`
+
+```{r}
+qc_plt <-
+  qc_tbl %>%
+  dplyr::filter(! is.na(test_result)) %>%
+  dplyr::mutate(
+    test_name = test_name %>% stringr::str_replace_all("_", " "),
+    tooltip = sprintf("Sample:%s<br>Test:%s<br>Result:%s", sample_id, test_name, test_result)
+  ) %>%
+  ggplot2::ggplot(aes(sample_id, test_name, fill = test_result, tooltip = tooltip)) +
+    ggiraph::geom_tile_interactive(size = 2.5) +
+    ggplot2::coord_flip() +
+    ggplot2::facet_wrap(~ qc_step) +
+    ggplot2::scale_fill_manual(values = c("fail" = "#cc3300", "pass" = "#339900", "warn" = "#ffcc00")) + 
+    ggplot2::theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    ggplot2::labs(x = "Sample", y = "Test", fill = "Result")
+plot_girafe(qc_plt)
+```
+
+
+```{r, fig.cap = "Read loss during QC"}
+read_loss_plt <-
+  read_loss_tbl %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(sample_id = sample_id %>% reorder(read_loss_perc)) %>%
+  ggplot2::ggplot(aes(sample_id, read_loss_perc, tooltip = sprintf("%.2f%%", read_loss_perc))) +
+    ggiraph::geom_col_interactive(position = "identity") +
+    ggplot2::coord_flip() +
+    ggplot2::scale_y_continuous(expand = c(0, 0)) +
+    ggplot2::labs(y = "Read loss (%)", x = "Sample")
+plot_girafe(read_loss_plt)
+```
+
+```{r, eval = excluded_samples_tbl %>% dim() %>% magrittr::extract(1) > 0}
+excluded_samples_tbl %>%
+  dplyr::select(sample_id, reason) %>%
+  dplyr::distinct_all() %>%
+  dplyr::mutate_all(~ stringr::str_replace_all(.x, "_", " ")) %>%
+  dplyr::rename(Sample = sample_id, Reason = reason) %>%
+  kable(caption = "Samples excluded from downstream analysis")
+```
+
+## Notes
+```{rmd, eval = read_loss_tbl$read_loss_perc %>% mean() > 50}
+- The average read loss over all samples is high
+  - Reasons
+    - low overall sequencing quality
+  - Implications
+    - low abundant taxa might not be caught by the data
+    - Abundance estimation of low abundant taxa is not robust. A high variance is expected.
+    - underestimated alpha diversity results emphasizing on rare taxa (e.g. richness or Chao1) 
+  - Suggestions
+    - Interpret results from very low abundant taxa with a grain of salt
+```
+
+## References

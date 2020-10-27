@@ -1,0 +1,121 @@
+a, a:hover, h1, h2, h3{
+	color: #2a59a6;
+}
+
+h4 {
+  color:black;
+}
+
+button.big {
+	font-size: 1.2em;
+}
+
+
+a {
+	// open links in a new tab
+	target-name:new;
+	target-new:tab;
+}
+
+h1 {
+	font-size: 2em;
+	margin-top: 2em;
+}
+
+h2 {
+	font-size: 1.5em;
+	margin-top: 1.5em;
+}
+
+h3 {
+	font-size: 1.2em;
+	margin-top: 1.2em;
+}
+
+h4 {
+	font-size: 1em;
+	margin-top: 1em;
+}
+
+
+
+caption, .caption {
+	font-size: 1.1em;
+	margin-bottom: 0;
+	text-align: center;
+	color: #777777;
+
+}
+
+.sidebar_header {
+	margin-left: 1em;
+	margin-top: 2.5em;
+	font-size: 1.2em;
+}
+
+body .main-container {
+	max-width: 1500px;
+}
+
+.right {
+	text-align: right;
+}
+
+.figure {
+	margin: auto;
+	max-width: 800px;
+	padding: 10px;
+	width: 80%;
+}
+
+img {
+    vertical-align: middle;
+    align-items: center;
+    margin: auto;
+    display: block;
+}
+
+/* Adjust ggirafe plot size*/
+svg {
+  max-width: 100% !important;
+  max-height: 100% !important;
+}
+
+.titleImage{
+	height: 1.5em;
+}
+
+.centered_item {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.home_panel_element {
+	display: inline-block;
+	margin-left: 10px;
+	background-color: white;
+	color: #2a59a6;
+	font-size: 1.2em;
+	margin-top: 1em;
+}
+
+.grid-container {
+  display: grid;
+  grid-template-columns: 20% auto;
+  background-color: transparent;
+  padding: 10px;
+  margin-top: 50px;
+  align-items: center;
+}
+
+.grid-item {
+  background-color: rgba(255, 255, 255, 0.8);
+  text-align: left;
+  width: 100%
+}
+
+code {
+	color: black;
+	background-color: #f9f9f9;
+}

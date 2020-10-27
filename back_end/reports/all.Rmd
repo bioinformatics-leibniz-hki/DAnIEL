@@ -1,0 +1,72 @@
+---
+title: "DAnIEL analysis report"
+bibliography: /app/back_end/reports/references.bib
+csl: /app/back_end/reports/references.csl
+output:
+  html_document:
+    theme: united
+    toc: true
+    toc_depth: 1
+    df_print: paged
+    css: [/app/front_end/www/daniel.css, report.css]
+params:
+  reports_dir: /sbidata/server/daniel/src/dev/back_end/reports/
+  project_dir: /sbidata/server/daniel/userdat/test_sra/
+  db_dir: /sbidata/server/daniel/db/
+---
+
+```{r, include = FALSE}
+library(tidyverse)
+library(jsonlite)
+
+options(knitr.duplicate.label = "allow")
+
+project <-
+  params$project_dir %>%
+  paste0(., "/input/project.json") %>%
+  jsonlite::read_json(simplifyVector = TRUE)
+```
+
+# Project
+
+```{r, echo = FALSE}
+list(
+  `project ID` = project$project_id,
+  Date = Sys.time() %>% as.POSIXlt(tz = "UTC") %>% as.character(),
+  `Pipeline version` = project$version
+) %>%
+  # ensure no field is null. Needed for tibble conversion
+  purrr::map_if(is.null, ~ "") %>%
+  tibble::as_tibble() %>%
+  knitr::kable()
+```
+
+```{r, child = "input.Rmd"}
+```
+
+```{r, child = "qc.Rmd"}
+```
+
+```{r, child = "denoising.Rmd"}
+```
+
+```{r, child = "phylotyping.Rmd"}
+```
+
+```{r, child = "features.Rmd"}
+```
+
+```{r, child = "correlations.Rmd"}
+```
+
+```{r, child = "statistics.Rmd"}
+```
+
+```{r, child = "ml.Rmd"}
+```
+
+```{r, child = "summary.Rmd"}
+```
+
+<!--include pooled references-->
+# References{#all-references}

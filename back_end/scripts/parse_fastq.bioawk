@@ -1,0 +1,9 @@
+#!/usr/bin/env bioawk
+
+# Clean FASTQ
+# - Remove comment in header
+# - Ensure that every third line is only '+' (NCBi SRA writes the id there which PIPITS denies)
+
+{
+	print "@"$name"\n"$seq"\n+\n"$qual
+}

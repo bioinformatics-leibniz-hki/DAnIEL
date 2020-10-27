@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   id="svg1652"
+   version="1.1"
+   viewBox="0 0 66.898743 41.542171"
+   height="41.542171mm"
+   width="66.898743mm">
+  <defs
+     id="defs1646">
+    <clipPath
+       id="clipPath92"
+       clipPathUnits="userSpaceOnUse">
+      <path
+         style="clip-rule:evenodd"
+         id="path90"
+         d="M -1.06e-7,1.8311e-4 H 960 V 540.00018 H -1.06e-7 Z" />
+    </clipPath>
+    <clipPath
+       id="clipPath102"
+       clipPathUnits="userSpaceOnUse">
+      <path
+         id="path100"
+         d="M 0,0 H 11.516 V 11.516 H 0 Z" />
+    </clipPath>
+    <clipPath
+       id="clipPath66"
+       clipPathUnits="userSpaceOnUse">
+      <path
+         style="clip-rule:evenodd"
+         id="path64"
+         d="M -1.1379e-5,2.4414e-4 H 959.99999 V 540.00024 H -1.1379e-5 Z" />
+    </clipPath>
+    <clipPath
+       id="clipPath76"
+       clipPathUnits="userSpaceOnUse">
+      <path
+         id="path74"
+         d="M 0,0 H 11.516 V 11.516 H 0 Z" />
+    </clipPath>
+  </defs>
+  <metadata
+     id="metadata1649">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     transform="translate(-33.830392,-19.2051)"
+     id="layer1">
+    <g
+       id="g60"
+       transform="matrix(0.35277777,0,0,-0.35277777,9.2526327,138.39172)">
+      <g
+         clip-path="url(#clipPath66)"
+         id="g62">
+        <g
+           transform="matrix(1.575,0,0,1.575,157.8,208.32)"
+           id="g68">
+          <g
+             transform="scale(6.2521,6.2523)"
+             id="g70">
+            <g
+               clip-path="url(#clipPath76)"
+               id="g72">
+              <path
+                 id="path78"
+                 style="fill:#bfbfbf;fill-opacity:1;fill-rule:nonzero;stroke:none"
+                 d="M 5.52,10.316 C 3.12,10.196 1.2,8.1797 1.2,5.7557 c 0,-2.52 2.04,-4.56 4.56,-4.56 1.14,0 2.208,0.408 3.048,1.176 L 5.52,5.6597 Z" />
+              <path
+                 id="path80"
+                 style="fill:#bfbfbf;fill-opacity:1;fill-rule:nonzero;stroke:none"
+                 d="M 6,10.316 V 5.9957 h 4.308 C 10.188,8.3357 8.328,10.196 6,10.316 Z" />
+              <path
+                 id="path82"
+                 style="fill:#bfbfbf;fill-opacity:1;fill-rule:nonzero;stroke:none"
+                 d="m 6.336,5.5157 2.808,-2.808 c 0.708,0.78 1.116,1.764 1.164,2.808 z" />
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g86"
+       transform="matrix(0.35277777,0,0,-0.35277777,9.2526327,138.39172)">
+      <g
+         clip-path="url(#clipPath92)"
+         id="g88">
+        <g
+           transform="matrix(1.8117,0,0,1.8117,50.64,226.44)"
+           id="g94">
+          <g
+             transform="scale(6.2521,6.2523)"
+             id="g96">
+            <g
+               clip-path="url(#clipPath102)"
+               id="g98">
+              <path
+                 id="path104"
+                 style="fill:#bfbfbf;fill-opacity:1;fill-rule:nonzero;stroke:none"
+                 d="M 2.4,9.8357 H 1.68 v -8.16 h 8.16 v 0.72 H 2.4 Z" />
+              <path
+                 id="path106"
+                 style="fill:#bfbfbf;fill-opacity:1;fill-rule:nonzero;stroke:none"
+                 d="m 3.12,3.1157 h 1.32 v 4.2 H 3.12 Z" />
+              <path
+                 id="path108"
+                 style="fill:#bfbfbf;fill-opacity:1;fill-rule:nonzero;stroke:none"
+                 d="m 4.92,3.1157 h 1.32 v 6.72 H 4.92 Z" />
+              <path
+                 id="path110"
+                 style="fill:#bfbfbf;fill-opacity:1;fill-rule:nonzero;stroke:none"
+                 d="m 6.72,3.1157 h 1.32 v 4.2 H 6.72 Z" />
+              <path
+                 id="path112"
+                 style="fill:#bfbfbf;fill-opacity:1;fill-rule:nonzero;stroke:none"
+                 d="m 8.52,3.1157 h 1.32 v 2.16 H 8.52 Z" />
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

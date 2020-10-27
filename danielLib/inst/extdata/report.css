@@ -1,0 +1,68 @@
+a, a:hover, h1, h2, h3{
+	color: #2a59a6;
+}
+
+button.big {
+	font-size: 1.2em;
+}
+
+
+a {
+	// open links in a new tab
+	target-name:new;
+	target-new:tab;
+}
+
+h1 {
+	font-size: 2em;
+}
+
+h2 {
+	font-size: 1.5em;
+}
+
+h3 {
+	font-size: 1.2em;
+}
+
+.caption {
+	font-size: 1.1em;
+	margin-bottom: 0;
+}
+
+body .main-container {
+	max-width: 1500px;
+}
+
+.right {
+	text-align: right;
+}
+
+.figure {
+	margin: auto;
+	max-width: 800px;
+	padding: 10px;
+}
+
+caption, .caption {
+	color: #eeeeee;
+	text-align: center;
+	font-size: 14px;
+}
+
+.titleImage{
+	height: 1.5em;
+}
+
+.home_grid {
+  display: inline-grid;
+  grid-template-rows: 100px;
+  grid-template-columns: 100px 100px 100px 100px 100px 100px;
+  grid-gap: 5px;
+}
+
+.centered_item {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}

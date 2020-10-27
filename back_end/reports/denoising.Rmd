@@ -1,0 +1,288 @@
+---
+bibliography: references.bib
+csl: references.csl
+output:
+  html_document:
+    theme: null
+    df_print: paged
+params:
+  reports_dir: /sbidata/server/daniel/src/latest/back_end/reports/
+  project_dir: /sbidata/server/daniel/userdat/example
+  db_dir: /sbidata/server/daniel/db/
+---
+
+```{r, include = FALSE}
+source("defaults.R")
+library(scales)
+library(treeio)
+library(ggtree)
+library(ape)
+library(dada2)
+
+num_repseqs_showed <- 30
+
+project <-
+  paste0(params$project_dir, "/input/project.json") %>%
+  jsonlite::read_json(simplifyVector = TRUE)
+
+selected_params <- danielLib::get_selected_params(project)
+
+denoising_params <- project$params$denoising_params[[selected_params$denoising]]
+denoising_dir <- paste0(params$project_dir, "/denoising/", stringr::str_replace_all(selected_params$denoising, " ", "_"), "/")
+
+samples_tbl <-
+  paste0(params$project_dir, "/input/samples.csv") %>%
+  danielLib::read_csv_guess_coltypes()
+
+denoised_tbl <-
+  paste0(denoising_dir, "denoised.csv") %>%
+  readr::read_csv() %>%
+  tidyr::gather(denoised, abundance, -sample_id)
+
+zero_inflation_tbl <-
+  denoised_tbl %>%
+  dplyr::group_by(sample_id, is_zero_inflated = abundance == 0) %>%
+  dplyr::count() %>%
+  tidyr::spread(is_zero_inflated, n) %>%
+  dplyr::transmute(zero_inflation = `TRUE` / sum(`TRUE` + `FALSE`) * 100)
+
+tree_path <- paste0(denoising_dir, "denoised.nwk")
+msa_path <- paste0(denoising_dir, "denoised.aligned.fasta")
+tree <- treeio::read.newick(tree_path)
+seq_df <- get_consensus_tbl(msa_path, tree)
+
+read_counts_tbl <-
+  paste0(denoising_dir, "read_counts.csv") %>%
+  readr::read_csv()
+
+alpha_div_tbl <- try(
+  denoised_tbl %>%
+    tidyr::spread(denoised, abundance) %>%
+    danielLib::get_alpha_diversity_all(),
+  silent = TRUE)
+alpha_div_metrics <- try(
+  alpha_div_tbl %>%
+  colnames() %>%
+  setdiff("sample_id")
+)
+```
+
+```{r, include = FALSE, eval = denoising_params$denoising_method == "asv_dada2"}
+dada2_l <-
+  paste0(denoising_dir, "denoised.rds") %>%
+  readr::read_rds()
+```
+
+# Denoising
+
+Denoising is the process of identifying correct biological sequences from quality controlled reads.
+This is done by removing potential sequencing errors.
+
+## Methods
+- `r {denoising_params$its_region}` region was targeted
+- Singletons were `r {ifelse(denoising_params$include_singletons, "", "not")}` included
+```{rmd, eval = denoising_params$denoising_method == "asv_dada2"}
+- ASV profiling was used to generate representative sequences of qc reads [@pmid27214047]. Briefly, sequence differences as little as 1 nucleotide were resolved by modeling the quality score of NGS reads.
+- DADA2 was performed for each sample and mate separately. Identical representative sequences were merged together.
+- DADA2 key model parameters: `r {dada2_l %>% pluck("dada2_res_l", 1, "fwd_dada", "opts") %>% magrittr::extract(c("OMEGA_A", "OMEGA_C", "BAND_SIZE")) %>% purrr::map2(names(.), ~paste0(.y, "=", .x)) %>% as.character() %>% paste(collapse = ", ")}`
+- Chimeras were removed using a *de novo* consensus approach
+```
+```{rmd, eval = denoising_params$denoising_method == "otu_pipits"}
+- OTU profiling was used to generate representative sequences of qc reads [@pmid27570615]. Briefly, sequences with a minimum identity of 97% were clustered together after extracting the `r {denoising_params$its_region}` region.
+- Chimeras were removed using the UNITE UCHIME reference data set as of 28 Jun 2017 [@pmid25786896]
+```
+- Multiple sequence alignment was performed on representative sequences only to visualize differences between the sequences
+- QIIME2 alignment tool using MAFFT method was used to align all representative sequences [@pmid31341288; @pmid23329690]
+- QIIME2 phylogeny tool using FastTree method was used to create a rooted tree out of this alignment [@pmid20224823]
+- For the sake of clarity, only the `r {num_repseqs_showed}` most prevalent sequences were shown. The tree, however, was calculated based on all representative sequences
+
+## Results
+- Denoising resulted in `r {denoised_tbl$denoised %>% unique() %>% length()}` unique representative sequences
+- Among those, `r {denoised_tbl %>% dplyr::group_by(denoised) %>% dplyr::filter(abundance > 0) %>% dplyr::count() %>% dplyr::filter(n == 1) %>% dim() %>% magrittr::extract(1)}` are only prevalent in one sample and `r {denoised_tbl %>% group_by(denoised) %>% filter(abundance > 0) %>% count() %>% filter(n >= 0.1 * denoised_tbl$sample_id %>% unique() %>% length()) %>% dim() %>% magrittr::extract(1)}` are prevalent in at least 10% of all samples
+- Final number of reads per sample ranged `r {read_counts_tbl$final %>% summary_text(num_fmt = ".1e")}`
+- Zero inflation ranged `r {zero_inflation_tbl$zero_inflation %>% summary_text(percentage = TRUE, num_fmt = ".1f")}` in the samples
+
+```{rmd, eval = 'data.frame' %in% class(alpha_div_tbl)}
+- Alpha diversity on denoised level
+  - Shannon ranged `r {alpha_div_tbl$Shannon %>% summary_text(num_fmt = ".2f")}`
+  - Chao1 ranged `r {alpha_div_tbl$Chao1 %>% summary_text(num_fmt = ".2f")}`
+  - Inverse Simpson index ranged `r {alpha_div_tbl$InvSimpson %>% summary_text(num_fmt = ".2f")}`
+```
+
+```{r, out.width="40%", fig.asp=1, fig.cap="Distribution of zero-inflations among denoised samples"}
+tooltip <-
+  zero_inflation_tbl %>%
+  pull(zero_inflation) %>%
+  summary() %>% {
+    sprintf("Min: %.2f<br>Mean:%.2f<br>Median:%.2f<br>Max: %.2f",
+            .[["Min."]], .[["Mean"]], .[["Median"]] , .[["Max."]])
+  }
+zero_inflation_plt <-
+  zero_inflation_tbl %>%
+  ggplot2::ggplot(aes(y=zero_inflation, tooltip = tooltip)) +
+    geom_boxplot_interactive() +
+    labs(y = "Zero-inflation (%)")
+plot_girafe(zero_inflation_plt)
+```
+
+```{r, eval = denoising_params$denoising_method == "asv_dada2", fig.cap="DADA2 error model"}
+dada2_l %>%
+  purrr::pluck("dada2_err_tbl") %>%
+  # ensure quality score is factor to allow multiple boxplots
+  dplyr::mutate(
+    consensus_qual_score = base::factor(consensus_qual_score),
+    from = transition %>% base::substr(1, 1),
+    to = transition %>% base::substr(3, 3),
+    mate = mate %>% purrr::map_chr(~ switch(.x, "fwd" = "Forward", "rev" = "Reverse", NA))
+  ) %>%
+  ggplot2::ggplot(ggplot2::aes(consensus_qual_score, err_freq, color = mate)) +
+  ggplot2::geom_boxplot(outlier.size = -1) +
+  ggplot2::scale_color_discrete() +
+  ggplot2::scale_y_log10(
+    breaks = scales::trans_breaks("log10", function(x) 10^x),
+    labels = scales::trans_format("log10", scales::math_format(10^.x))
+  ) +
+  ggplot2::annotation_logticks(sides = "l") +
+  ggplot2::scale_x_discrete(breaks = seq(0, 40, by = 10)) +
+  ggplot2::facet_wrap(~transition) +
+  ggplot2::labs(
+    x = "Consensus quality score",
+    y = "Error frequency",
+    color = "Mate"
+  )
+```
+
+```{r, eval = denoising_params$denoising_method == "asv_dada2", fig.cap="Read loss during denoising"}
+steps <- c("qc", "filtered", "dereplicated", "denoised", "inferred", "final")
+
+read_count_plt <-
+  read_counts_tbl %>%
+  dplyr::mutate(
+    qc_fwd = qc,
+    qc_rev = qc,
+    filtered_fwd = filtered,
+    filtered_rev = filtered,
+    inferred_fwd = inferred,
+    inferred_rev = inferred,
+    final_fwd = final,
+    final_rev = final
+  ) %>%
+  tidyr::gather(step, reads, -sample_id) %>%
+  dplyr::mutate(
+    mate = step %>% stringr::str_extract("(fwd|rev)$"),
+    step = step %>% stringr::str_extract("^.*_") %>% stringr::str_remove("_$") %>% factor(levels = steps, ordered = TRUE),
+    mate = mate %>% purrr::map_chr(~ switch(.x, "fwd" = "Forward", "rev" = "Reverse", NA))
+  ) %>%
+  dplyr::filter(! is.na(mate)) %>%
+  ggplot2::ggplot(aes(sample_id, reads, fill = step, tooltip = reads)) +
+    ggiraph::geom_bar_interactive(stat = "identity", position = "identity") +#
+    ggplot2::scale_fill_viridis_d(direction = -1) +
+    ggplot2::scale_y_log10(
+      breaks = scales::trans_breaks("log10", function(x) 10^x),
+      labels = scales::trans_format("log10", scales::math_format(10^.x))
+    ) + 
+    coord_flip() +
+    facet_grid(~mate) +
+    ggplot2::labs(y = "Reads", x = "Sample", fill = "Step")
+plot_girafe(read_count_plt)
+```
+
+```{r, eval = denoising_params$denoising_method == "otu_pipits", fig.cap="Read loss during denoising"}
+steps <- c("prepped", "its", "final")
+
+read_count_plt <-
+  read_counts_tbl %>%
+  tidyr::gather(step, reads, -sample_id) %>%
+  ggplot2::ggplot(aes(sample_id, reads, fill = step, tooltip = reads)) +
+    ggiraph::geom_bar_interactive(stat = "identity", position = "identity") +#
+    ggplot2::scale_fill_viridis_d(direction = -1) +
+    ggplot2::scale_y_log10(
+      breaks = scales::trans_breaks("log10", function(x) 10^x),
+      labels = scales::trans_format("log10", scales::math_format(10^.x))
+    ) + 
+    coord_flip() +
+    ggplot2::labs(y = "Reads", x = "Sample", fill = "Step")
+plot_girafe(read_count_plt)
+```
+
+```{r, fig.cap="Multiple sequence alignment of most prevalent representative sequences"}
+repseqs <- 
+  denoised_tbl %>%
+  dplyr::group_by(denoised) %>%
+  dplyr::filter(abundance > 0) %>%
+  dplyr::count() %>%
+  dplyr::arrange(-n) %>%
+  head(num_repseqs_showed) %>%
+  dplyr::pull(denoised)
+
+  tree_plt <-
+    tree %>%
+    ape::keep.tip(repseqs) %>%
+    ggtree::ggtree() +
+    ggtree::geom_tiplab(align = TRUE) +
+    ggtree::geom_treescale() +
+    ggtree::geom_rootpoint(size = 4) +
+    ggtree::theme_tree()
+
+  ggtree::gheatmap(
+    p = tree_plt,
+    data = seq_df[repseqs,],
+    color = "white",
+    offset = 0.8,
+    colnames = FALSE
+    ) +
+    ggplot2::scale_fill_manual(
+      breaks = c("#", "-", "a", "c", "g", "t"),
+      values = c("white", "lightgrey", "#64F73F", "#FFB340", "#EB413C", "#3C88EE"),
+      labels = c("Consensus", "Gap", "A", "C", "G", "T")
+    )
+```
+
+```{r, fig.cap="Denoised alpha diversity"}
+denoised_tbl %>%
+  tidyr::spread(denoised, abundance) %>%
+  danielLib::plot_alpha_diversity(samples_tbl = samples_tbl)
+```
+
+
+## Notes
+```{rmd, eval = zero_inflation_tbl$zero_inflation %>% mean() > 0.5}
+- The denoised abundance profile is highly zero-inflated
+  - Reasons
+    - a lot of representative sequences are unique to one sample and do not describe general biological entities
+  - Implications
+    - poor statistical performance due to tied rank tests
+    - false positive correlations in co-abundance networks
+  - Suggestions
+    - Aggregate counts to a higher taxonomic level during feature generation (e.g. species or genus)
+    - Use a prevalence filter in the feature generation section
+```
+```{rmd, eval = denoising_params$include_singletons}
+- Singletons were included
+  - Implications
+    - poor statistical performance due to too few replicas
+    - sequencing errors are more likely to end up as features
+  - Suggestions
+    - Aggregate counts to a higher taxonomic level during feature generation (e.g. species or genus)
+    - deactivate the inclusion of singletons
+```
+```{rmd, eval = denoising_params$denoising_method == "otu_pipits"}
+- OTU profiling was selected
+  - Implications
+    - This method do not profit from the low error rates in NGS data
+    - Representative sequences do not represent a biological entity
+  - Suggestions
+    - Use ASV profiling instead
+    - Use OTU profiling only for the sake of legacy analysis
+    - See [@pmid28731476] for details
+```
+- Tree of representative sequences
+  - Reasons
+    - The ITS region alone is insufficiently short to draw robust phylogenetic relationships from it
+  - Implications
+    - This tree does not reassemble phylogenetic relationships
+  - Suggestions
+    - Use this tree only to visualize differences in the representative sequences
+    - Do not derive phylogenetic relationships between the sequences from this tree
+
+## References

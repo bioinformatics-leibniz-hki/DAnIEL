@@ -1,0 +1,24 @@
+name: analysis
+channels:
+ - conda-forge
+ - bioconda
+ - r
+ - defaults
+dependencies:
+ - r-base=3.6.1
+ - r-hmisc
+ - parallel 
+ - fastspar
+ - bioconductor-banocc
+ - r-tidyverse
+ - r-broom
+ - r-optparse
+ - r-caret
+ - r-optparse
+ - r-effsize
+ - r-dunn.test
+ - r-doparallel
+ - r-kernlab
+ - r-randomforest
+ - r-e1071
+ - r-mlmetrics

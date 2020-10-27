@@ -1,0 +1,261 @@
+---
+bibliography: references.bib
+csl: references.csl
+output:
+  html_document:
+    theme: null
+    df_print: kable
+params:
+  reports_dir: /sbidata/server/daniel/src/back_end/reports/
+  project_dir: /sbidata/server/daniel/userdat/example
+  db_dir: /sbidata/server/daniel/db/
+---
+
+```{r, include=FALSE}
+source("defaults.R")
+
+project <-
+  paste0(params$project_dir, "/input/project.json") %>%
+  jsonlite::read_json(simplifyVector = TRUE)
+
+selected_params <- get_selected_params(project)
+
+analysis_params <- project$params$analysis_params[[selected_params$analysis]]
+analysis_dir <- paste0(params$project_dir, "/analysis/", stringr::str_replace_all(selected_params$analysis, " ", "_"), "/")
+features_dir <- paste0(params$project_dir, "/features/", stringr::str_replace_all(selected_params$features, " ", "_"), "/")
+correlation_dir <- paste0(analysis_dir, "correlation/")
+pval_max <- analysis_params$max_pvalue
+cor_min <- analysis_params$correlation_min_abs_cor
+
+features_meta_tbl <-
+  features_dir %>%
+  paste0("features.meta.csv") %>%
+  readr::read_csv()
+
+cor_groups <-
+  paste0(correlation_dir, "/groups.txt") %>%
+  read_lines() %>%
+  # correlation result must be available
+  purrr::keep(~ paste0(correlation_dir, .x, "/results.csv") %>% file.exists())
+
+cor_groups_discarded <-
+  paste0(correlation_dir, "/groups.txt") %>%
+  read_lines() %>%
+  purrr::discard(~ paste0(correlation_dir, .x, "/results.csv") %>% file.exists())
+
+cor_tbl <-
+  tibble(group = cor_groups) %>%
+  mutate(
+    cor_results_path = paste0(correlation_dir, group, "/results.csv"),
+    cor_results_tbl = map2(cor_results_path, group, ~ readr::read_csv(.x) %>% dplyr::mutate(group = .y))
+  ) %>%
+  pull(cor_results_tbl) %>%
+  bind_rows() %>%
+  # filter by p value if provided. This is needed to pass banocc results
+  dplyr::filter(if (p_value %>% is.na() %>% all()) TRUE else p_value <= pval_max) %>%
+  dplyr::filter(abs(cor) >= cor_min)
+
+```
+
+```{r, include=FALSE, eval=cor_groups %>% length() > 0}
+groups_cor_tbl <- danielLib::get_groups_cor_tbl(correlation_dir = correlation_dir, nodes_tbl = features_meta_tbl, max_p_value = pval_max, min_abs_cor = cor_min)
+
+node_topology_tbl <- danielLib::get_node_topology_tbl(groups_cor_tbl, node_topology_properties = c("Betweeness centrality", "Closeness centrality", "Node degree"))
+
+correlated_features <-
+  cor_tbl %>%
+  dplyr::select(matches("^feature")) %>%
+  tidyr::gather(k, v) %>%
+  dplyr::pull(v) %>%
+  unique()
+
+has_many_cor_groups <- groups_cor_tbl %>% dim() %>% ifelse(is.null(.), 0, .) %>% pluck(1) > 1
+```
+
+<script>MathJax.Hub.Queue(["Typeset", MathJax.Hub]);</script>
+
+# Correlation Networks
+
+Correlation is used to assess co-abundant features.
+
+```{rmd, eval=cor_groups %>% length() == 0}
+## Results  
+
+- No correlation network was calculated
+- Possible reasons:
+  - Lack of samples or features in all sample groups
+  `r {ifelse(analysis_params$correlation_method == "banocc", "- BAnOCC models did not reach convergence", "")}`
+```
+```{r, eval=cor_groups %>% length() == 0}
+knitr::knit_exit()
+```
+
+## Methods
+
+```{rmd, eval = analysis_params$correlation_grouping != "all"}
+- Correlations were calculated separately using sample grouping `r {analysis_params$correlation_grouping}`
+- Only groups having at least `r {analysis_params$correlation_min_samples}` samples and `r {analysis_params$correlation_min_features}` features were considered
+- Sample groups matched these criteria: `r {cor_groups %>% paste0(collapse = ", ")}`
+```
+```{rmd, eval = analysis_params$correlation_grouping == "all"}
+- Correlations were calculated using all samples combined
+```
+- Only correlations with absolute correlation coefficient $abs(r) \ge `r {cor_min}`$ were considered
+```{rmd, eval = analysis_params$correlation_method != "banocc"}
+- Only correlations with $p \le `r {pval_max}`$ were considered
+```
+```{rmd, eval = analysis_params$correlation_method == "sparcc"}
+- FastSpar implementation of SparCC was used to calculate correlations between features [@pmid30169561; @pmid23028285]
+- This method is optimized for sparse data
+- Significance was evaluated using `r {analysis_params$sparcc_repetitions}` bootstraps and iterations
+```
+```{rmd, eval = analysis_params$correlation_method == "banocc"}
+- BAnOCC was used to calculate correlations between features [@pmid29140991]
+- This method is optimized for compositional data
+- Raw feature counts were normalized using total sum scaling (cumulative abundance of each sample is 1)
+- Parameters used for the Bayesian model: `r {analysis_params$banocc_chains}` chains, `r {analysis_params$banocc_iters}` iterations of which `r {analysis_params$banocc_warmup}` were used for warm-up, and a minimum confidence level of $\alpha \ge `r {analysis_params$banocc_alpha}`$
+```
+
+## Results
+```{rmd, eval=cor_tbl %>% nrow() == 0}
+- No correlation was significant in any sample group
+
+## References
+```
+```{r, eval=cor_tbl %>% nrow() == 0}
+knitr::knit_exit()
+```
+- Totaling `r {correlated_features %>% length()}` features were significantly correlated to at lest one other feature ($p \leq `r {pval_max}`$)
+```{rmd, eval=cor_groups_discarded %>% length() > 0}
+- Sample groups in which calculating correlation network failed: `r {cor_groups_discarded %>% paste(collapse = ", ")}`
+```
+```{rmd, eval = correlated_features %>% length() > 0}
+- These are namely: `r {correlated_features %>% paste(collapse = ', ')}`
+```
+```{rmd, eval = analysis_params$correlation_method != "banocc"}
+- This resulted in `r {cor_tbl %>% dim() %>% magrittr::extract(1)}` significant correlations ($p \leq `r {pval_max}`$)
+```
+```{rmd, eval = analysis_params$correlation_method == "banocc"}
+- This resulted in `r {cor_tbl %>% dim() %>% magrittr::extract(1)}` significant correlations ($\alpha \geq `r {analysis_params$banocc_alpha}`$)
+```
+```{r, eval = correlated_features %>% length() > 0}
+cor_tbl %>%
+  dplyr::select(
+    group,
+    `Feature A` = feature_a, `Feature B` = feature_b, `Correlation coeff` = cor, `p value` = p_value, `q value` = q_value
+  ) %>%
+  kable(caption = "Significant correlations") %>%
+  kableExtra::collapse_rows(1) %>%
+  kableExtra::scroll_box(height = "500px")
+```
+
+```{rmd, eval = groups_cor_tbl %>% dim() %>% pluck(1) %>% ifelse(is.null(.), 0, .) > 1}
+- Closeness centrality, betweeness centrality and node degree were calculated to asses node topology
+- Distribution of these metrics were compared between the sample group using Kruskal-Wallis test and Dunn's test
+```
+
+```{r, eval = ! is.null(groups_cor_tbl)}
+cor_net_plt <-
+  groups_cor_tbl %>%
+  pull(plt) %>%
+  ggpubr::ggarrange(plotlist = ., common.legend = TRUE, legend = "right")
+
+plot_girafe(cor_net_plt)
+```
+
+```{r, eval = has_many_cor_groups}
+node_topology_stat_tbl <-
+  node_topology_tbl %>%
+  group_by(key) %>%
+    do(
+      quietly({
+        dunn.test::dunn.test(x = .[["value"]], g = .[["correlation_group"]], kw = FALSE)
+      }) %>%
+        as.list() %>%
+        tibble::as_tibble() %>%
+        tidyr::separate(comparisons, into = c("group1", "group2"), sep = " - ") %>%
+        dplyr::mutate(label = P.adjusted %>% significance_label())
+  ) %>%
+  dplyr::filter(P.adjusted <= pval_max)
+
+node_topology_stat_tbl %>%
+  dplyr::select(Metric = key, `Group A` = group1, `Group B` = group2, `q value` = P.adjusted) %>%
+  kable(caption = "Significant topological metrics") %>%
+  kableExtra::collapse_rows(1)
+```
+
+```{rmd, eval = has_many_cor_groups}
+### Network topology
+- network topology differed significantly in `r {node_topology_stat_tbl %>% mutate(comp = paste0(group1, " vs. ", group2)) %>% pull(comp) %>% unique() %>% paste(collapse = ", ")}` (Kruskal-Wallis test, Dunn's test, $p \leq `r {pval_max}`$)
+```
+  
+```{r}
+topology_plt <- danielLib::plot_correlation_topology(node_topology_tbl)
+
+plot_girafe(topology_plt)
+```
+
+```{r, eval = analysis_params$correlation_method == "banocc"}
+banocc_envs <-
+  cor_groups %>%
+  map_chr(~ paste0(correlation_dir, .x, "/environment.RData")) %>%
+  map( ~ {
+    env <- new.env()
+    load(.x, envir = env)
+    as.list(env)
+  })
+
+fits_names <-
+  banocc_envs %>%
+  purrr::map_chr(~ .x %>% purrr::pluck("out_dir") %>% basename())
+
+fits <-
+  banocc_envs %>%
+  purrr::map(~ .x %>% purrr::pluck("b_fit", "Fit")) %>%
+  magrittr::set_names(fits_names)
+  
+fits_summary_tbl <-
+  banocc_envs %>%
+  map(~ .x %>% pluck("b_stat_tbl")) %>%
+  magrittr::set_names(fits_names) %>%
+  tibble::enframe() %>%
+  unnest(cols = c(value))
+
+params_converged <- fits_summary_tbl %>% dplyr::filter(Rhat < 1.05) %>% nrow()
+params_total <- fits_summary_tbl %>% nrow()
+```
+
+```{rmd, eval = analysis_params$correlation_method == "banocc"}
+### Model fit
+
+- BAnOCC model was fitted using rstan engine
+- Convergence was achieved for `r {params_converged}` out of `r {params_total}` parameters ($\hat R < 1.05$)
+```
+
+```{r, eval = analysis_params$correlation_method == "banocc", fig.cap="Model convergence. End of warmup is indicated by black vertical lines."}
+fits %>%
+  danielLib::plot_stanfit() %>%
+  plot_girafe()
+```
+
+```{r, eval = analysis_params$correlation_method == "banocc"}
+fits_summary_tbl %>%
+  kable(caption = "Summary of model fit. Estimated parameters and derived quantities using the posterior draws.") %>%
+  kableExtra::collapse_rows(1) %>%
+  kableExtra::scroll_box(height = "500px")
+```
+
+## Notes
+- Correlation is neither sufficient nor required to derive causality from it
+```{rmd, eval = analysis_params$correlation_method == "spearman"}
+- Spurious correlations
+  - Reasons
+    - Spearman\'s method is prone to spurious correlations
+  - Implications
+    - A very high false positive rate is expected
+  - Suggestions
+    - Apply a high prevalence filter threshold to reduce sparseness
+    - Use other correlations aware of sparseness (e.g. SparCC)
+```
+
+## References
