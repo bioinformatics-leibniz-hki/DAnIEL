@@ -240,7 +240,7 @@ norm_table <- function(abundance_tbl, normalization_method, prevalent_taxa, remo
   norm_tbl %<>%
     dplyr::filter(
       # pnly keep prevalent samples and taxa
-      taxon %in% prevalent_taxa & abundance > 0
+      taxon %in% prevalent_taxa
     )
 
   if (remove_unassigned) {
