@@ -15,10 +15,34 @@
 #
 
 require(tidyverse)
+require(optparse)
 
-args <- base::commandArgs(trailingOnly = TRUE)
-qiime2_tax_tsv_path <- base::ifelse(is.na(args[1]), "/dev/stdin", args[1])
-phylotyped_csv_path <- base::ifelse(is.na(args[2]), "/dev/stdout", args[2])
+args <- base::list(
+  optparse::make_option(
+    opt_str = "--qiime2-tax-tsv-path",
+    type = "character",
+    default = "/dev/stdin",
+    help = "Path to input tsv taxonomy table file produced by QIIME2"
+  ),
+  optparse::make_option(
+    opt_str = "--phylotyped-csv-path",
+    type = "character",
+    default = "/dev/stdout",
+    help = "Path to output csv taxonomy table file, one column per taxrank"
+  ),
+  optparse::make_option(
+    opt_str = "--replace-na-taxa",
+    type = "logical",
+    default = FALSE,
+    action = "store_true",
+    help = "Replace not assigned taxa by it's higher taxon name followed by sp."
+  )
+) %>%
+  optparse::OptionParser(
+    option_list = .,
+    description = "Qiime tsv taxonomy table to csv, one column per taxrank"
+  ) %>%
+  optparse::parse_args(convert_hyphens_to_underscores = TRUE)
 
 extract_rank <- function(lineage_str, rank) {
   if (rank == "t") {
@@ -38,7 +62,15 @@ extract_rank <- function(lineage_str, rank) {
   }
 }
 
-qiime2_tax_tsv_path %>%
+replace_taxon <- function(taxon, upstream_taxon) {
+  if(! is.na(taxon)) return(taxon)
+  if(is.na(upstream_taxon)) stop("Both taxon and upstream taxon are NA")
+  
+  upstream_taxon %>% str_remove_all("( sp.)+") %>% paste0(" sp.")
+}
+
+tbl <-
+  args$qiime2_tax_tsv_path %>%
   readr::read_tsv() %>%
   dplyr::rename(
     sequence = `Feature ID`,
@@ -55,5 +87,22 @@ qiime2_tax_tsv_path %>%
     phylum = extract_rank(taxon, "p"),
     kingdom = extract_rank(taxon, "k")
   ) %>%
-  dplyr::select(-taxon) %>%
-  readr::write_csv(phylotyped_csv_path)
+  dplyr::select(-taxon)
+
+if(args$replace_na_taxa) {
+  tbl <-
+    tbl %>%
+    rowwise() %>%
+    mutate(
+      kingdom = kingdom %>% {.x <- .; .x %>% is.na() %>% ifelse("Fungi", .x)},
+      phylum = phylum %>% replace_taxon(kingdom),
+      class = class %>% replace_taxon(phylum),
+      order = order %>% replace_taxon(`class`),
+      family = family %>% replace_taxon(order),
+      genus = genus %>% replace_taxon(family),
+      species = species %>% replace_taxon(genus),
+      strain = strain %>% replace_taxon(species)
+    ) 
+}
+
+tbl %>% readr::write_csv(args$phylotyped_csv_path)
