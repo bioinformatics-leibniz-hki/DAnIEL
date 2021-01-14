@@ -185,6 +185,7 @@ norm_table <- function(abundance_tbl, normalization_method, prevalent_taxa, remo
     "clr" = {
       abundance_tbl %>%
         dplyr::group_by(sample_id) %>%
+        # compositions version 1.40.3 needed. Subscript out of bounds error otherwise
         dplyr::mutate(abundance = compositions::clr(abundance))
     },
     "raw" = {
