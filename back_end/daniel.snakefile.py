@@ -10,10 +10,10 @@
 # The project code is licensed under BSD 2-Clause.
 # See the LICENSE file provided with the code for the full license.
 
-import os
-import pandas as pd
 import functools as ft
+import os
 
+import pandas as pd
 
 # Disallow slashes in wildcards. They are only used to separate directories.
 wildcard_constraints:
@@ -31,7 +31,6 @@ USERDAT_DIR = os.environ["DANIEL_USERDAT_DIR"] + "/"
 DB_DIR = os.environ["DANIEL_DB_DIR"] + "/"
 SCRIPT_DIR = os.environ["DANIEL_SCRIPT_DIR"] + "/"
 REPORT_DIR = SCRIPT_DIR + "../reports/"
-shell.prefix("export PATH=%s:$PATH; " % SCRIPT_DIR)
 
 # samples
 str_to_list = lambda x: [] if x == "" else x
@@ -108,6 +107,9 @@ CORRELATION_GROUPS = (
     if correlation_grouping == "all"
     else pd.read_csv(INPUT_DIR + "/samples.csv")[correlation_grouping].unique()
 )
+
+shell.executable("/bin/bash")
+shell.prefix("export PATH=%s:$PATH; " % SCRIPT_DIR)
 
 print("This is DAnIEL " + VERSION, file=sys.stderr)
 print("Script dir: " + SCRIPT_DIR, file=sys.stderr)

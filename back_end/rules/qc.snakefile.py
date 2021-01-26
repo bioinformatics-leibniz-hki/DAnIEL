@@ -112,8 +112,8 @@ rule cutadapt:
         params:
                 min_quality_leading = QC_PARAMS["min_quality_leading"],
                 min_quality_trailing = QC_PARAMS["min_quality_trailing"],
-                error_rate = 0.1,
-                min_length = 100,
+                qc_error_rate = QC_PARAMS["qc_error_rate"],
+                min_read_length = QC_PARAMS["min_read_length"]
         threads:
                 MAX_THREADS
         conda:
@@ -124,8 +124,8 @@ rule cutadapt:
                 """
                 cutadapt \
                         --quality-cutoff {params.min_quality_leading},{params.min_quality_trailing} \
-                        --error-rate {params.error_rate} \
-                        --minimum-length {params.min_length} \
+                        --error-rate {params.qc_error_rate} \
+                        --minimum-length {params.min_read_length} \
                         --cores {threads} \
                         -b file:{input.trimm_seqs} \
                         -B file:{input.trimm_seqs} \
@@ -150,13 +150,12 @@ checkpoint final_qc:
                 qc_dir = QC_DIR,
                 qc_exclusion_criteria = ",".join(QC_PARAMS["qc_exclusion_criteria"]),
                 min_qc_read_count = QC_PARAMS["min_qc_read_count"]
-        conda:
-                "../envs/qc.conda_env.yml"
         shell:
                 """
+                source deactivate
                 qc_tests.R \
                         --qc-dir {params.qc_dir} \
                         --qc-exclusion-criteria {params.qc_exclusion_criteria} \
-                        --min-qc-read-count {params.min_qc_read_count} \
-                && touch {output.done}
+                        --min-qc-read-count {params.min_qc_read_count}
+                touch {output.done}
                 """

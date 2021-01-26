@@ -28,7 +28,7 @@ denoised_fasta_paths <-
   # failed samples may create an empty fasta file. Discard these
   purrr::discard(~ file.size(.) == 0) %>%
   # remove summary if already exsisted
-  base::setdiff(paste0(dir, "/denoised.fasta"))
+  purrr::discard(~ .x %>% str_detect(paste0(dir, "/(raw_)?denoised.fasta")))
 
 sample_asv_seqs <-
   denoised_fasta_paths %>%
@@ -44,7 +44,8 @@ sample_asv_counts_tbl <-
   dplyr::bind_rows() %>%
   readr::type_convert()
 
-asv_tbl <- sample_asv_seqs %>%
+asv_tbl <-
+  sample_asv_seqs %>%
   lapply(function(x) {
     table(x) %>%
       tibble::as_tibble() %>%
@@ -68,7 +69,7 @@ asv_seqs <- asv_tbl$seq %>% base::unique()
 names(asv_seqs) <- asv_tbl$asv %>% base::unique()
 asv_seqs %>%
   Biostrings::DNAStringSet() %>%
-  Biostrings::writeXStringSet(base::paste0(dir, "/denoised.fasta"))
+  Biostrings::writeXStringSet(base::paste0(dir, "/raw_denoised.fasta"))
 
 # denoised abundance profile
 asv_profile_tbl <- asv_tbl %>%
@@ -78,7 +79,7 @@ asv_profile_tbl <- asv_tbl %>%
   dplyr::mutate(asv = factor(asv, levels = names(asv_seqs))) %>%
   dplyr::arrange(asv) %>%
   tidyr::spread(asv, abundance, fill = 0) %T>%
-  readr::write_csv(paste0(dir, "/denoised.csv"))
+  readr::write_csv(paste0(dir, "/raw_denoised.csv"))
 
 # summary of error models
 dada2_res_l <-

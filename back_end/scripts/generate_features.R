@@ -64,11 +64,11 @@ args <- base::list(
     help = "Normalization method (one of clr, tss, rarefaction)"
   ),
   optparse::make_option(
-    opt_str = c("-u", "--remove-unassigned"),
-    type = "logical",
-    default = TRUE,
+    opt_str = c("-u", "--unknown-strategy"),
+    type = "character",
+    default = "remove",
     action = "store_true",
-    help = "Remove unassigned features"
+    help = "Strategy to deal with unassigned sequences. One of remove or infer:"
   ),
   optparse::make_option(
     opt_str = c("-o", "--out-norm-csv"),
@@ -122,8 +122,51 @@ if (!args$normalization_method %in% c("rarefaction", "tss", "clr", "css")) {
 }
 
 denoised_tbl <- readr::read_csv(args$denoised_csv)
-phylotyped_tbl <- readr::read_csv(args$phylotyped_csv)
 samples_tbl <- readr::read_csv(args$samples_meta_csv)
+
+replace_na_taxon <- function(taxon, upsteam_taxon) {
+  if (!is.na(taxon)) {
+    return(taxon)
+  }
+  if (is.na(upsteam_taxon)) {
+    warning(stringr::str_glue("Unable to replace {taxon}. Keep NA"))
+    return(NA)
+  }
+
+  upsteam_taxon %>%
+    str_remove_all("( sp[.]?)+") %>%
+    paste0(" sp.")
+}
+
+phylotyped_tbl <-
+  readr::read_csv(args$phylotyped_csv) %>%
+  dplyr::mutate_all(~ .x %>%
+    stringr::str_detect("^unclassified$|^unknwon$|^unidentified$|( sp[.]?$)") %>%
+    ifelse(yes = NA, no = .x))
+
+phylotyped_tbl <-
+  switch(args$unknown_strategy,
+    "infer" = {
+      phylotyped_tbl %>%
+        dplyr::filter(!is.na(kingdom)) %>%
+        dplyr::rowwise() %>%
+        dplyr::mutate(
+          phylum = replace_na_taxon(phylum, kingdom),
+          class = replace_na_taxon(class, phylum),
+          order = replace_na_taxon(order, class),
+          family = replace_na_taxon(family, order),
+          genus = replace_na_taxon(genus, family),
+          species = replace_na_taxon(species, genus),
+          strain = replace_na_taxon(strain, species)
+        ) %>%
+        dplyr::ungroup()
+    },
+    "remove" = {
+      phylotyped_tbl %>%
+        filter_at(args$taxonomic_rank, ~ !is.na(.x))
+    },
+    stop(stringr::str_glue("Unknown strategy '{args$unknown_strategy}' not implemented!"))
+  )
 
 tbl <-
   denoised_tbl %>%
@@ -135,6 +178,7 @@ tbl <-
   dplyr::mutate(abundance_perc = abundance / sum(abundance) * 100) %>%
   dplyr::rename(taxon = !!args$taxonomic_rank) %>%
   dplyr::ungroup()
+
 
 prevalent_taxa <-
   switch(

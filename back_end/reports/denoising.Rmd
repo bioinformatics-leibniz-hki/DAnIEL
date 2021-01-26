@@ -6,9 +6,9 @@ output:
     theme: null
     df_print: paged
 params:
-  reports_dir: /sbidata/server/daniel/src/latest/back_end/reports/
-  project_dir: /sbidata/server/daniel/userdat/example
-  db_dir: /sbidata/server/daniel/db/
+  reports_dir: /sbidata/server/daniel/latest/repo/back_end/reports/
+  project_dir: /sbidata/server/daniel/latest/userdat/test_wo_nonfungal/
+  db_dir: /sbidata/server/daniel/latest/db
 ---
 
 ```{r, include = FALSE}
@@ -26,7 +26,6 @@ project <-
   jsonlite::read_json(simplifyVector = TRUE)
 
 selected_params <- danielLib::get_selected_params(project)
-
 denoising_params <- project$params$denoising_params[[selected_params$denoising]]
 denoising_dir <- paste0(params$project_dir, "/denoising/", stringr::str_replace_all(selected_params$denoising, " ", "_"), "/")
 
@@ -37,34 +36,7 @@ samples_tbl <-
 denoised_tbl <-
   paste0(denoising_dir, "denoised.csv") %>%
   readr::read_csv() %>%
-  tidyr::gather(denoised, abundance, -sample_id)
-
-zero_inflation_tbl <-
-  denoised_tbl %>%
-  dplyr::group_by(sample_id, is_zero_inflated = abundance == 0) %>%
-  dplyr::count() %>%
-  tidyr::spread(is_zero_inflated, n) %>%
-  dplyr::transmute(zero_inflation = `TRUE` / sum(`TRUE` + `FALSE`) * 100)
-
-tree_path <- paste0(denoising_dir, "denoised.nwk")
-msa_path <- paste0(denoising_dir, "denoised.aligned.fasta")
-tree <- treeio::read.newick(tree_path)
-seq_df <- get_consensus_tbl(msa_path, tree)
-
-read_counts_tbl <-
-  paste0(denoising_dir, "read_counts.csv") %>%
-  readr::read_csv()
-
-alpha_div_tbl <- try(
-  denoised_tbl %>%
-    tidyr::spread(denoised, abundance) %>%
-    danielLib::get_alpha_diversity_all(),
-  silent = TRUE)
-alpha_div_metrics <- try(
-  alpha_div_tbl %>%
-  colnames() %>%
-  setdiff("sample_id")
-)
+  possibly(tidyr::gather, NULL)(denoised, abundance, -sample_id)
 ```
 
 ```{r, include = FALSE, eval = denoising_params$denoising_method == "asv_dada2"}
@@ -88,19 +60,120 @@ This is done by removing potential sequencing errors.
 - Chimeras were removed using a *de novo* consensus approach
 ```
 ```{rmd, eval = denoising_params$denoising_method == "otu_pipits"}
-- OTU profiling was used to generate representative sequences of qc reads [@pmid27570615]. Briefly, sequences with a minimum identity of 97% were clustered together after extracting the `r {denoising_params$its_region}` region.
+- OTU profiling was used to generate representative sequences of qc reads [@pmid27570615]. Briefly, sequences with a minimum identity of `r {denoising_params$identity_threshold}` were clustered together after extracting the `r {denoising_params$its_region}` region.
 - Chimeras were removed using the UNITE UCHIME reference data set as of 28 Jun 2017 [@pmid25786896]
 ```
+- Denoised sequences were scanned by a probable nonfungal origin using ITSx [@bengtsson2013improved]
 - Multiple sequence alignment was performed on representative sequences only to visualize differences between the sequences
 - QIIME2 alignment tool using MAFFT method was used to align all representative sequences [@pmid31341288; @pmid23329690]
 - QIIME2 phylogeny tool using FastTree method was used to create a rooted tree out of this alignment [@pmid20224823]
 - For the sake of clarity, only the `r {num_repseqs_showed}` most prevalent sequences were shown. The tree, however, was calculated based on all representative sequences
 
 ## Results
+```{rmd, eval=is.null(denoised_tbl)}
+- Denoised abundance table did not contain any hit
+
+## References
+```
+```{r, eval=is.null(denoised_tbl)}
+knitr::knit_exit()
+```
+
+
+```{r, include = FALSE}
+zero_inflation_tbl <-
+  denoised_tbl %>%
+  dplyr::group_by(sample_id, is_zero_inflated = abundance == 0) %>%
+  dplyr::count() %>%
+  tidyr::spread(is_zero_inflated, n) %>%
+  dplyr::transmute(zero_inflation = `TRUE` / sum(`TRUE` + `FALSE`) * 100) 
+
+tree_path <- paste0(denoising_dir, "denoised.nwk")
+msa_path <- paste0(denoising_dir, "denoised.aligned.fasta")
+tree <- treeio::read.newick(tree_path)
+seq_df <- possibly(get_consensus_tbl, NA)(msa_path, tree)
+
+read_counts_tbl <-
+  paste0(denoising_dir, "read_counts.csv") %>%
+  readr::read_csv()
+
+alpha_div_tbl <- try(
+  denoised_tbl %>%
+    tidyr::spread(denoised, abundance) %>%
+    danielLib::get_alpha_diversity_all(),
+  silent = TRUE
+)
+alpha_div_metrics <- try(
+  alpha_div_tbl %>%
+    colnames() %>%
+    setdiff("sample_id")
+)
+```
+
+```{r, eval = denoising_params$denoising_method == "dada2", include = FALSE}
+itsx_taxa <- list(
+  F = "Fungi",
+  Unknown = "Unknown",
+  A = "Alveolata",
+  B = "Bryophyta",
+  C = "Bacillariophyta",
+  D = "Amoebozoa",
+  E = "Euglenozoa",
+  G = "Chlorophyta",
+  H = "Rhodophyta",
+  I = "Phaeophyceae",
+  L = "Marchantiophyta",
+  M = "Metazoa",
+  O = "Oomycota",
+  P = "Haptophyceae",
+  Q = "Raphidophyceae",
+  R = "Rhizaria",
+  S = "Synurophyceae",
+  T = "Tracheophyta",
+  U = "Eustigmatophyceae",
+  X = "Apusozoa",
+  Y = "Parabasalia"
+)
+
+its_taxa_colors <- itsx_taxa %>%
+  length() %>%
+  viridis::viridis()
+names(its_taxa_colors) <- itsx_taxa %>% as.character()
+its_taxa_colors[["Fungi"]] <- "grey"
+
+itsx_taxa_tbl <-
+  str_glue("{denoising_dir}filtered.{denoising_params$its_region}.fasta") %>%
+  read_lines() %>%
+  keep(~ .x %>% str_detect("^>")) %>%
+  enframe() %>%
+  separate(value, into = letters) %>%
+  select(denoised = b, taxon = c) %>%
+  mutate(taxon = taxon %>% recode(!!!itsx_taxa))
+
+raw_denoised_tbl <-
+  denoising_dir %>%
+  paste0("raw_denoised.csv") %>%
+  read_csv() %>%
+  pivot_longer(-sample_id, names_to = "denoised", values_to = "abundance") %>%
+  left_join(itsx_taxa_tbl, by = "denoised") %>%
+  replace_na(list(taxon = "Unknown")) %>%
+  group_by(sample_id, taxon) %>%
+  summarise(abundance = sum(abundance)) %>%
+  group_by(sample_id) %>%
+  mutate(
+    abundance = abundance / sum(abundance) * 100,
+    taxon = taxon %>% factor(levels = itsx_taxa %>% rev())
+  )
+```
+
 - Denoising resulted in `r {denoised_tbl$denoised %>% unique() %>% length()}` unique representative sequences
 - Among those, `r {denoised_tbl %>% dplyr::group_by(denoised) %>% dplyr::filter(abundance > 0) %>% dplyr::count() %>% dplyr::filter(n == 1) %>% dim() %>% magrittr::extract(1)}` are only prevalent in one sample and `r {denoised_tbl %>% group_by(denoised) %>% filter(abundance > 0) %>% count() %>% filter(n >= 0.1 * denoised_tbl$sample_id %>% unique() %>% length()) %>% dim() %>% magrittr::extract(1)}` are prevalent in at least 10% of all samples
 - Final number of reads per sample ranged `r {read_counts_tbl$final %>% summary_text(num_fmt = ".1e")}`
 - Zero inflation ranged `r {zero_inflation_tbl$zero_inflation %>% summary_text(percentage = TRUE, num_fmt = ".1f")}` in the samples
+
+```{rmd, eval = denoising_params$exclude_non_fungal}
+- `r {raw_denoised_tbl$sample_id %>% setdiff(denoised_tbl$sample_id) %>% unique() %>% length()}` samples were excluded due to no fungal hits, nameley: `r {raw_denoised_tbl$sample_id %>% setdiff(denoised_tbl$sample_id) %>% unique() %>% paste0(collapse = ", ")}`
+```
 
 ```{rmd, eval = 'data.frame' %in% class(alpha_div_tbl)}
 - Alpha diversity on denoised level
@@ -113,15 +186,18 @@ This is done by removing potential sequencing errors.
 tooltip <-
   zero_inflation_tbl %>%
   pull(zero_inflation) %>%
-  summary() %>% {
-    sprintf("Min: %.2f<br>Mean:%.2f<br>Median:%.2f<br>Max: %.2f",
-            .[["Min."]], .[["Mean"]], .[["Median"]] , .[["Max."]])
+  summary() %>%
+  {
+    sprintf(
+      "Min: %.2f<br>Mean:%.2f<br>Median:%.2f<br>Max: %.2f",
+      .[["Min."]], .[["Mean"]], .[["Median"]], .[["Max."]]
+    )
   }
 zero_inflation_plt <-
   zero_inflation_tbl %>%
-  ggplot2::ggplot(aes(y=zero_inflation, tooltip = tooltip)) +
-    geom_boxplot_interactive() +
-    labs(y = "Zero-inflation (%)")
+  ggplot2::ggplot(aes(y = zero_inflation, tooltip = tooltip)) +
+  geom_boxplot_interactive() +
+  labs(y = "Zero-inflation (%)")
 plot_girafe(zero_inflation_plt)
 ```
 
@@ -173,17 +249,17 @@ read_count_plt <-
     step = step %>% stringr::str_extract("^.*_") %>% stringr::str_remove("_$") %>% factor(levels = steps, ordered = TRUE),
     mate = mate %>% purrr::map_chr(~ switch(.x, "fwd" = "Forward", "rev" = "Reverse", NA))
   ) %>%
-  dplyr::filter(! is.na(mate)) %>%
+  dplyr::filter(!is.na(mate)) %>%
   ggplot2::ggplot(aes(sample_id, reads, fill = step, tooltip = reads)) +
-    ggiraph::geom_bar_interactive(stat = "identity", position = "identity") +#
-    ggplot2::scale_fill_viridis_d(direction = -1) +
-    ggplot2::scale_y_log10(
-      breaks = scales::trans_breaks("log10", function(x) 10^x),
-      labels = scales::trans_format("log10", scales::math_format(10^.x))
-    ) + 
-    coord_flip() +
-    facet_grid(~mate) +
-    ggplot2::labs(y = "Reads", x = "Sample", fill = "Step")
+  ggiraph::geom_bar_interactive(stat = "identity", position = "identity") + #
+  ggplot2::scale_fill_viridis_d(direction = -1) +
+  ggplot2::scale_y_log10(
+    breaks = scales::trans_breaks("log10", function(x) 10^x),
+    labels = scales::trans_format("log10", scales::math_format(10^.x))
+  ) +
+  coord_flip() +
+  facet_grid(~mate) +
+  ggplot2::labs(y = "Reads", x = "Sample", fill = "Step")
 plot_girafe(read_count_plt)
 ```
 
@@ -194,19 +270,19 @@ read_count_plt <-
   read_counts_tbl %>%
   tidyr::gather(step, reads, -sample_id) %>%
   ggplot2::ggplot(aes(sample_id, reads, fill = step, tooltip = reads)) +
-    ggiraph::geom_bar_interactive(stat = "identity", position = "identity") +#
-    ggplot2::scale_fill_viridis_d(direction = -1) +
-    ggplot2::scale_y_log10(
-      breaks = scales::trans_breaks("log10", function(x) 10^x),
-      labels = scales::trans_format("log10", scales::math_format(10^.x))
-    ) + 
-    coord_flip() +
-    ggplot2::labs(y = "Reads", x = "Sample", fill = "Step")
+  ggiraph::geom_bar_interactive(stat = "identity", position = "identity") + #
+  ggplot2::scale_fill_viridis_d(direction = -1) +
+  ggplot2::scale_y_log10(
+    breaks = scales::trans_breaks("log10", function(x) 10^x),
+    labels = scales::trans_format("log10", scales::math_format(10^.x))
+  ) +
+  coord_flip() +
+  ggplot2::labs(y = "Reads", x = "Sample", fill = "Step")
 plot_girafe(read_count_plt)
 ```
 
 ```{r, fig.cap="Multiple sequence alignment of most prevalent representative sequences"}
-repseqs <- 
+repseqs <-
   denoised_tbl %>%
   dplyr::group_by(denoised) %>%
   dplyr::filter(abundance > 0) %>%
@@ -215,27 +291,27 @@ repseqs <-
   head(num_repseqs_showed) %>%
   dplyr::pull(denoised)
 
-  tree_plt <-
-    tree %>%
-    ape::keep.tip(repseqs) %>%
-    ggtree::ggtree() +
-    ggtree::geom_tiplab(align = TRUE) +
-    ggtree::geom_treescale() +
-    ggtree::geom_rootpoint(size = 4) +
-    ggtree::theme_tree()
+tree_plt <-
+  tree %>%
+  ape::keep.tip(repseqs) %>%
+  ggtree::ggtree() +
+  ggtree::geom_tiplab(align = TRUE) +
+  ggtree::geom_treescale() +
+  ggtree::geom_rootpoint(size = 4) +
+  ggtree::theme_tree()
 
-  ggtree::gheatmap(
-    p = tree_plt,
-    data = seq_df[repseqs,],
-    color = "white",
-    offset = 0.8,
-    colnames = FALSE
-    ) +
-    ggplot2::scale_fill_manual(
-      breaks = c("#", "-", "a", "c", "g", "t"),
-      values = c("white", "lightgrey", "#64F73F", "#FFB340", "#EB413C", "#3C88EE"),
-      labels = c("Consensus", "Gap", "A", "C", "G", "T")
-    )
+ggtree::gheatmap(
+  p = tree_plt,
+  data = seq_df[repseqs, ],
+  color = "white",
+  offset = 0.8,
+  colnames = FALSE
+) +
+  ggplot2::scale_fill_manual(
+    breaks = c("#", "-", "a", "c", "g", "t"),
+    values = c("white", "lightgrey", "#64F73F", "#FFB340", "#EB413C", "#3C88EE"),
+    labels = c("Consensus", "Gap", "A", "C", "G", "T")
+  )
 ```
 
 ```{r, fig.cap="Denoised alpha diversity"}
@@ -244,6 +320,20 @@ denoised_tbl %>%
   danielLib::plot_alpha_diversity(samples_tbl = samples_tbl)
 ```
 
+```{r, eval = denoising_params$exclude_non_fungal, fig.cap="Contamination detected and filtered by ITSx"}
+raw_denoised_tbl %>%
+  ggplot(aes(sample_id, abundance, fill = taxon)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  scale_x_discrete(expand = c(0, 0)) +
+  scale_y_discrete(expand = c(0, 0)) +
+  scale_fill_manual(values = its_taxa_colors) +
+  labs(
+    x = "Sample",
+    y = "Abundance (%)",
+    fill = "Taxon"
+  )
+```
 
 ## Notes
 ```{rmd, eval = zero_inflation_tbl$zero_inflation %>% mean() > 0.5}

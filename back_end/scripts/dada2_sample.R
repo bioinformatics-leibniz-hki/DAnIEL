@@ -44,10 +44,40 @@ args <- base::list(
     help = "Name of sample"
   ),
   optparse::make_option(
+    "--max-n",
+    type = "integer",
+    default = 0,
+    help = "Sequences with more than maxN Ns will be discarded"
+  ), 
+  optparse::make_option(
+    "--min-q",
+    type = "integer",
+    default = 0,
+    help = "Reads contain a quality score less than minQ will be discarded"
+  ),
+  optparse::make_option(
+    "--max-ee",
+    type = "character",
+    default = "2,2",
+    help = "Reads with higher than maxEE 'expected errors' will be discarded. Values for fwd and rev read separated by ','"
+  ),
+  optparse::make_option(
+    "--trunc-q",
+    type = "integer",
+    default = 0,
+    help = "Truncate reads at the first instance of a quality score less than or equal to truncQ"
+  ),
+  optparse::make_option(
     c("-o", "--out-dir"),
     type = "character",
     default = "out",
     help = "output directory"
+  ),
+  optparse::make_option(
+    c("-m", "--min-read-length"),
+    type = "double",
+    default = 50,
+    help = "Minimum read length"
   )
 ) %>%
   optparse::OptionParser(
@@ -59,6 +89,9 @@ args <- base::list(
 fwd_filtered_fastq <- base::paste0(args$out_dir, "/", args$sample_name, "_1.filtered.fq.gz")
 rev_filtered_fastq <- base::paste0(args$out_dir, "/", args$sample_name, "_2.filtered.fq.gz")
 
+# separate max erros for fws and rev read
+args$max_ee <- args$max_ee %>% str_split(",") %>% pluck(1) %>% map_dbl(as.double)
+
 base::dir.create(args$out_dir, recursive = TRUE)
 
 filtered <- dada2::filterAndTrim(
@@ -66,10 +99,11 @@ filtered <- dada2::filterAndTrim(
   filt = fwd_filtered_fastq,
   rev = args$rev_qc_fastq,
   filt.rev = rev_filtered_fastq,
-  maxN = 0,
-  maxEE = c(2, 2),
-  truncQ = 2,
-  minLen = 50,
+  minQ = args$min_q,
+  maxN = args$max_n,
+  maxEE = args$max_ee,
+  truncQ = args$trunc_q,
+  minLen = args$min_read_length,
   rm.phix = TRUE,
   compress = TRUE,
   multithread = TRUE

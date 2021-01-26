@@ -30,7 +30,7 @@ denoised_tbl <-
 
 denoised_tbl %>%
   tidyr::spread(denoised, abundance) %>%
-  readr::write_csv(paste0(dir, "/denoised.csv"))
+  readr::write_csv(paste0(dir, "/raw_denoised.csv"))
 
 read_counts_tbl <-
   list(

@@ -33,7 +33,7 @@ rule repseq_tree:
         Creates a rooted Newick tree of denoised sequences
         """
         input:
-                target = TARGET_DENOISING_METHOD,
+                TARGET_DENOISING_METHOD,
         output:
                 repseq_tree = DENOISING_DIR + "denoised.nwk",
                 repseq_msa = DENOISING_DIR + "denoised.aligned.fasta"
@@ -46,8 +46,10 @@ rule repseq_tree:
                 """
                 create_tree.sh {params.denoised_fasta} {params.out_dir} && \
                 mv {params.out_dir}/tree.nwk {output.repseq_tree} && \
-                mv {params.out_dir}/aligned-dna-sequences.fasta {output.repseq_msa}
+                mv {params.out_dir}/aligned-dna-sequences.fasta {output.repseq_msa} ||
+                    touch {output.repseq_tree} {output.repseq_msa}
                 """
+
 
 rule dada2_sample:
         """
@@ -62,7 +64,12 @@ rule dada2_sample:
                 csv_path = DENOISING_DIR + "{sample}/denoised.csv"
         params:
                 sample = "{sample}",
-                out_dir = DENOISING_DIR + "{sample}/"
+                out_dir = DENOISING_DIR + "{sample}/",
+                min_read_length = QC_PARAMS["min_read_length"],
+                max_n = DENOISING_PARAMS["max_n"],
+                min_q = DENOISING_PARAMS["min_q"],
+                max_ee = DENOISING_PARAMS["ma_ee"],
+                trunc_q = DENOISING_PARAMS["trunc_q"]
         conda:
                 "../envs/denoising.conda_env.yml"
         shell:
@@ -71,13 +78,18 @@ rule dada2_sample:
                         --fwd-qc-fastq {input.fwd_qc_fastq} \
                         --rev-qc-fastq {input.rev_qc_fastq} \
                         --sample-name {params.sample} \
-                        --out-dir {params.out_dir} || \
+                        --out-dir {params.out_dir} \
+                        --max-n {params.max_n} \
+                        --min-q {params.min_q} \
+                        --max-ee {params.max_ee} \
+                        --trunc-q {params.trunc_q} \
+                        --min-read-length {params.min_read_length} || \
                         touch {output.fasta_path} {output.csv_path}
                 """
 
 rule dada2:
         """
-        Final rule to summarize sample wise ASV results
+        Final rule to summarize, filter and trim sample wise ASV results
         """
         input:
                 fasta_paths = denoising_fasta,
@@ -85,15 +97,36 @@ rule dada2:
         output:
                 DENOISING_DIR + ".denoised.dada2.done"
         params:
-                fasta_path = DENOISING_DIR + "denoised.fasta",
-                csv_path = DENOISING_DIR + "denoised.csv",
-                denoising_dir = DENOISING_DIR
+                denoising_dir = DENOISING_DIR,
+                its_region = DENOISING_PARAMS["its_region"]
+        threads:
+               MAX_THREADS
         conda:
                 "../envs/denoising.conda_env.yml"
         shell:
                 """
-                dada2_combine_samples.R {params.denoising_dir} && \
-                        touch {output}
+                dada2_combine_samples.R {params.denoising_dir}
+
+                ITSx \
+                    -i {params.denoising_dir}/raw_denoised.fasta \
+                    -o {params.denoising_dir}/filtered \
+                    --cpu {threads} \
+                    --save_regions {params.its_region}
+
+                # keep only fungal seqs with the selected subregion
+                bioawk \
+                    -c fastx \
+                    '$name ~ /\"|F|\"/ {{print \">\"$name\"\\n\"$seq}}' \
+                    {params.denoising_dir}/filtered.{params.its_region}.fasta \
+                    | sed 's/|[A-Z]|ITS[12]//' \
+                    > {params.denoising_dir}/denoised.fasta
+
+                filter_denoised_counts.R \
+                         {params.denoising_dir}/raw_denoised.csv \
+                         {params.denoising_dir}/denoised.fasta \
+                         {params.denoising_dir}/denoised.csv
+
+                touch {output}
                 """
 
 rule pipits:
@@ -102,7 +135,7 @@ rule pipits:
         """
         input:
                 otu_table = DENOISING_DIR + "pipits/3-process/otu_table.txt",
-                fasta_paths = DENOISING_DIR + "denoised.fasta"
+                fasta_paths = DENOISING_DIR + "raw_denoised.fasta"
         output:
                 done = DENOISING_DIR + ".denoised.pipits.done"
         params:
@@ -122,7 +155,7 @@ rule pipits_parse_repseqs:
         input:
                 fasta_path = DENOISING_DIR + "pipits/3-process/repseqs.fasta"
         output:
-                fasta_path = DENOISING_DIR + "denoised.fasta"
+                fasta_path = DENOISING_DIR + "raw_denoised.fasta"
         params:
                 bioawk_path = SCRIPT_DIR + "parse_fasta.bioawk"
         conda:
@@ -199,7 +232,8 @@ rule pipits_process:
                 fasta_path = DENOISING_DIR + "pipits/3-process/repseqs.fasta",
         params:
                 out_dir = DENOISING_DIR + "pipits/3-process",
-                db_dir = DB_DIR + "pipits_db"
+                db_dir = DB_DIR + "pipits_db",
+                identity_threshold = DENOISING_PARAMS["identity_threshold"]
         threads:
                 MAX_THREADS
         conda:
@@ -212,6 +246,7 @@ rule pipits_process:
                 pipits_process \
                         -i {input.its_fasta} \
                         -o {params.out_dir} \
+                        -d {params.identity_threshold} \
                         -t {threads} \
                         --unite 02.02.2019 && \
                 # remove db link

@@ -84,5 +84,7 @@ rule convert_qiime2_taxonomy:
                 taxonomy_csv = PROJECT_DIR + "phylotyping/{param_set}/phylotyped.csv"
         shell:
                 """
-                qiime_tax_to_csv.R {params.taxonomy_tsv} {output.taxonomy_csv}
+                qiime_tax_to_csv.R \
+                        --qiime2-tax-tsv-path {params.taxonomy_tsv} \
+                        --phylotyped-csv-path {output.taxonomy_csv}
                 """

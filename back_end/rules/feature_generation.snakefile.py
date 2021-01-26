@@ -22,6 +22,7 @@ rule generate_features:
                 min_abundance = FEATURES_PARAMS["min_abundance"],
                 min_prevalence = FEATURES_PARAMS["min_prevalence"],
                 group_prevalence = FEATURES_PARAMS["group_prevalence"],
+                unknown_strategy = FEATURES_PARAMS["unknown_strategy"]
         output:
                 features_norm_csv = FEATURES_DIR + "features.csv",
                 features_css_csv = FEATURES_DIR + "features.css.csv",
@@ -43,7 +44,7 @@ rule generate_features:
                         --min-abundance-perc {params.min_abundance} \
                         --min-prevalence-perc {params.min_prevalence} \
                         --normalization-method {params.normalization_method} \
-                        --remove-unassigned
+                        --unknown-strategy {params.unknown_strategy}
                 """
 
 rule generate_phyloseq:

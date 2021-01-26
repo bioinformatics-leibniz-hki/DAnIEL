@@ -93,5 +93,3 @@ TARGET_ALL = TARGET_MISC + TARGET_RAW + TARGET_QC + TARGET_REPORT_ALL\
 
 # this is the final target rule executed by default
 TARGET_ALL_CLEAN = PROJECT_DIR + ".clean.done"
-
-

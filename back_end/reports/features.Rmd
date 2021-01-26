@@ -74,6 +74,7 @@ Furthermore, abundance profiles were normalized to make them comparable between 
 - Cumulative sum scaling (css) normalization is used for ordination biplots to ensure non-negative abundance values
 - A feature is considered as prevalent if it's abundance is at least `r {features_params$min_abundance}`%
 - Only features more prevalent than `r {features_params$min_prevalence}`% of all samples were kept for downstream analysis
+- Strategy `r {features_params$unknown_strategy}` was applied to deal with unassigned sequences
 
 ## Results
 - Totaling `r {length(features)}` features and `r {samples_tbl %>% nrow()}` samples were generated
