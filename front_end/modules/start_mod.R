@@ -61,6 +61,15 @@ ANALYSIS_PARAM_SET <- c(
   "banocc_alpha", "sparcc_repetitions"
 )
 
+ALL_PARAM_SET <-
+  c(
+    QC_PARAM_SET,
+    DENOISING_PARAM_SET,
+    PHYLOTYPING_PARAM_SET,
+    FEATURES_PARAM_SET,
+    ANALYSIS_PARAM_SET
+  )
+
 #' names for parameter sets
 SELECTED_STEPS <- list(
   qc = "Selected QC",
@@ -401,12 +410,14 @@ remove_muxed <- function(samples, input_mod) {
 }
 
 save_project_json <- function(project, input, input_mod) {
+  browser()
+  
   # adding default parameter set to project
   input_l <- shiny::isolate(reactiveValuesToList(input))
 
   # missing params occur if the ui was never rendered. Use defaults instead
   missing_params <-
-    c(PHYLOTYPING_PARAM_SET, ANALYSIS_PARAM_SET) %>%
+    ALL_PARAM_SET %>%
     setdiff(names(input))
 
   missing_params_l <-
