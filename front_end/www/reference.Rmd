@@ -1,6 +1,6 @@
 ---
-bibliography: "/sbidata/server/daniel/db/etc/daniel.bib"
-csl: "/sbidata/server/daniel/db/etc/daniel.csl" 
+bibliography: "/sbidata/server/daniel/latest/db/etc/daniel.bib"
+csl: "/sbidata/server/daniel/latest/db/etc/daniel.csl" 
 output:
   html_document:
     theme: null

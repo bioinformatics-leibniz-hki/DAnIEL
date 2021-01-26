@@ -20,17 +20,21 @@ denoising_mod_UI <- function(id) {
   shiny::fluidPage(
     width = NULL,
     shiny::uiOutput(ns("static_report")),
-    shiny::h2("Interactive alpha diversity"),
-    shiny::div("Representative sequences (ASV or OTUs) of denoised reads are used to calculate diversity for each sample."),
-    boxplot_mod_UI(ns("boxplot_mod")),
-    shiny::h2("Download"),
-    shiny::downloadButton(
-      outputId = ns("download_rep_seqs"),
-      label = "Denoised sequences (FASTA)"
-    ),
-    shiny::downloadButton(
-      outputId = ns("download_denoised_profile"),
-      label = "Denoised profile (XLSX)"
+
+    shiny::div(
+      id = ns("interactive"),
+      shiny::h2("Interactive analysis"),
+      shiny::div("Representative sequences (ASV or OTUs) of denoised reads are used to calculate diversity for each sample."),
+      boxplot_mod_UI(ns("boxplot_mod")),
+      shiny::h2("Download"),
+      shiny::downloadButton(
+        outputId = ns("download_rep_seqs"),
+        label = "Denoised sequences (FASTA)"
+      ),
+      shiny::downloadButton(
+        outputId = ns("download_denoised_profile"),
+        label = "Denoised profile (XLSX)"
+      )
     )
   )
 }
@@ -88,6 +92,9 @@ denoising_mod <- function(input, output, session, project) {
   })
 
   alphadiv_tbl <- shiny::reactive({
+    shiny::req(denoised_tbl() %>% nrow() > 0)
+    shinyjs::show("interactive")
+    
     danielLib::get_alpha_diversity_all(denoised_tbl())
   })
 

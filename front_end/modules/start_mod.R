@@ -31,14 +31,16 @@ DEFAULT_ANALYSIS_PARAM_SET <- list(
 
 #' UI ids for QC parameters
 QC_PARAM_SET <- c(
-  "phred_format", "adapter_fasta", "min_read_length", "include_revcomp_primers",
+  "phred_format", "adapter_fasta", "include_revcomp_primers",
+  "min_read_length", "qc_error_rate",
   "min_quality_trailing", "min_quality_leading", "additional_adapter_files",
   "min_qc_read_count", "qc_exclusion_criteria"
 )
 
 #' UI ids for denoising parameters
 DENOISING_PARAM_SET <- c(
-  "its_region", "denoising_method", "include_singletons"
+  "its_region", "denoising_method", "include_singletons", "identity_threshold",
+  "max_n", "min_q", "max_ee", "trunc_q"
 )
 
 #' UI ids for phylotyping parameters
@@ -49,7 +51,7 @@ PHYLOTYPING_PARAM_SET <- c(
 #' UI ids for features parameters
 FEATURES_PARAM_SET <- c(
   "taxonomic_rank", "phylo_database", "normalization_method",
-  "min_abundance", "min_prevalence", "group_prevalence"
+  "min_abundance", "min_prevalence", "group_prevalence", "unknown_strategy"
 )
 
 #' UI ids for analysis parameters
@@ -68,7 +70,7 @@ SELECTED_STEPS <- list(
   analysis = "Selected Analysis"
 )
 
-panel_banocc <- function(ns = NS("start_mod")) {
+panel_banocc <- function(ns = shiny::NS("start_mod")) {
   shiny::div(
     shiny::numericInput(
       inputId = ns("banocc_chains"),
@@ -127,7 +129,7 @@ panel_analysis <- function(ns, ...) {
       label = "Correlation grouping",
       value = "all"
     ) %>% update_label(),
-    shiny::selectInput(
+    shiny::radioButtons(
       inputId = ns("correlation_method"),
       label = "Inter feature correlation method",
       choices = c("SparCC" = "sparcc", "BAnOCC" = "banocc", "Spearman" = "spearman"),
@@ -143,7 +145,7 @@ panel_features <- function(ns, ...) {
   shinyBS::bsCollapsePanel(
     ...,
     title = "Feature generation",
-    selectInput(
+    shiny::radioButtons(
       inputId = ns("taxonomic_rank"),
       label = "Taxonomic rank",
       choices = c(
@@ -152,7 +154,7 @@ panel_features <- function(ns, ...) {
       ),
       selected = "species"
     ) %>% update_label(),
-    shiny::selectInput(
+    shiny::radioButtons(
       inputId = ns("phylo_database"),
       label = "Phylogeny",
       choices = "index_fungorum_2016",
@@ -177,14 +179,22 @@ panel_features <- function(ns, ...) {
       value = "all",
       label = "Prevalence group"
     ) %>% update_label(),
-    shiny::selectInput(
+    shiny::radioButtons(
       inputId = ns("normalization_method"),
       label = "Normalization method",
       choices = c(
         "CLR (centered log-ratio)" = "clr", "CSS (Cumulative sum scaling)" = "css", "TSS (Total sum scaling)" = "tss",
         "Rarefaction" = "rarefaction", "Raw (No normalization)" = "raw"
       ),
-      selected = "CLR"
+      selected = "clr"
+    ) %>% update_label(),
+    shiny::radioButtons(
+      inputId = ns("unknown_strategy"),
+      label = "Unknown strategy",
+      choices = c(
+        "Remove unknown sequences" = "remove", "Infer taxon names from upstream taxonomic ranks and add sp." = "infer"
+      ),
+      selected = "remove"
     ) %>% update_label()
   )
 }
@@ -207,19 +217,60 @@ panel_phylotyping <- function(ns, ...) {
   shinyBS::bsCollapsePanel(
     ...,
     title = "Phylotyping",
-    shiny::selectInput(
+    shiny::radioButtons(
       inputId = ns("ref_database"),
       label = "Reference database",
       choices = "unite_8.0_dynamic",
       selected = "unite_8.0_dynamic"
     ) %>% update_label(),
-    shiny::selectInput(
+    shiny::radioButtons(
       inputId = ns("sequence_classifier"),
       label = "Sequence classifier",
       choices = c("Qiime2 BLAST Consensus" = "qiime2_blast", "Qiime2 Naive Bayes" = "qiime2_nb"),
       selected = "qiime2_nb"
     ) %>% update_label(),
     shiny::uiOutput(ns("panel_blast"))
+  )
+}
+
+panel_pipits <- function(ns = shiny::NS("start_mod")) {
+  shiny::div(
+    shiny::numericInput(
+      inputId = ns("identity_threshold"),
+      label = "OTU identity threshold",
+      value = 0.97,
+      min = 0,
+      max = 1,
+      step = 0.01
+    ) %>% update_label()
+  )
+}
+
+panel_dada2 <- function(ns = shiny::NS("start_mod")) {
+  shiny::div(
+    shiny::numericInput(
+      inputId = ns("max_n"),
+      label = "Maximal number of undefined bases",
+      value = 0,
+      min = 0,
+    ) %>% update_label(),
+    shiny::numericInput(
+      inputId = ns("min_q"),
+      label = "Minimal base quality",
+      value = 0,
+      min = 0,
+    ) %>% update_label(),
+    shiny::numericInput(
+      inputId = ns("trunc_q"),
+      label = "Truncate quality",
+      value = 2,
+      min = 0,
+    ) %>% update_label(),
+    shiny::textInput(
+      inputId = ns("max_ee"),
+      label = "Maximal expected errors",
+      value = "2,2",
+    ) %>% update_label()
   )
 }
 
@@ -243,9 +294,12 @@ panel_denoising <- function(ns, ...) {
       inputId = ns("include_singletons"),
       label = "Include singletons",
       value = FALSE
-    ) %>% update_label()
+    ) %>% update_label(),
+    shiny::uiOutput(ns("panel_dada2")),
+    shiny::uiOutput(ns("panel_pipits"))
   )
 }
+
 
 #' @param ns name space as generated by shiny::NS
 panel_qc <- function(ns, ...) {
@@ -286,9 +340,15 @@ panel_qc <- function(ns, ...) {
       value = 25
     ) %>% update_label(),
     shiny::numericInput(
+      inputId = ns("qc_error_rate"),
+      label = "Maximum allowed error rate",
+      value = 0.1,
+      step = 0.05
+    ) %>% update_label(),
+    shiny::numericInput(
       inputId = ns("min_read_length"),
       label = "Minimum read length (bp)",
-      value = 100
+      value = 50
     ) %>% update_label(),
     shiny::numericInput(
       inputId = ns("min_qc_read_count"),
@@ -509,7 +569,7 @@ update_choices <- function(csv_path, session, input_id) {
   res <- tbl$id
   names(res) <- tbl$name
 
-  shiny::updateSelectInput(
+  shiny::updateRadioButtons(
     session = session,
     inputId = input_id,
     choices = res,
@@ -525,6 +585,26 @@ start_mod <- function(input, output, session, project, input_mod) {
   #
   # display conditional UI elements
   #
+  output$panel_pipits <- shiny::renderUI(panel_pipits())
+  output$panel_dada2 <- shiny::renderUI(panel_dada2())
+  output$panel_blast <- shiny::renderUI(panel_blast())
+  message("here")
+  
+  shiny::observeEvent(
+    eventExpr = input$denoising_method,
+    handlerExpr = {
+      switch(input$denoising_method,
+        "otu_pipits" = {
+          output$panel_pipits <- shiny::renderUI(panel_pipits())
+          output$panel_dada2 <- NULL
+        },
+        "asv_dada2" = {
+          output$panel_pipits <- NULL
+          output$panel_dada2 <- shiny::renderUI(panel_dada2())
+        }
+      )
+    }
+  )
 
   shiny::observeEvent(
     eventExpr = input$sequence_classifier,
