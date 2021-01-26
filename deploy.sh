@@ -10,17 +10,13 @@
 # The project code is licensed under BSD 2-Clause.
 # See the LICENSE file provided with the code for the full license.
 
-# knit Rmd
-find front_end/ | grep Rmd$ | xargs -i -P $(nproc) R -e "rmarkdown::render('{}')"
-
-# build images
 export COMPOSE_DOCKER_CLI_BUILD=1 
 export DOCKER_BUILDKIT=1
+
 docker-compose build --parallel
-
-# start in swarm mode
-# docker stack rm daniel
-# docker stack deploy -c docker-compose.yml daniel
-
-# start in normal mode
+docker stack rm daniel
 docker-compose up
+
+# docker swarm mode
+#docker stack deploy -c docker-compose.yml daniel
+

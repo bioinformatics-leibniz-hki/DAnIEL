@@ -16,8 +16,8 @@ services:
                 condition: on-failure
             resources:
                 limits:
-                    cpus: "50"
-                    memory: "50G"
+                    cpus: "10"
+                    memory: "10G"
                 reservations:
                     cpus: "10"
                     memory: "5G"
