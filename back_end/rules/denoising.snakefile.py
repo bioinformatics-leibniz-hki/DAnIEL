@@ -68,7 +68,7 @@ rule dada2_sample:
                 min_read_length = QC_PARAMS["min_read_length"],
                 max_n = DENOISING_PARAMS["max_n"],
                 min_q = DENOISING_PARAMS["min_q"],
-                max_ee = DENOISING_PARAMS["ma_ee"],
+                max_ee = DENOISING_PARAMS["max_ee"],
                 trunc_q = DENOISING_PARAMS["trunc_q"]
         conda:
                 "../envs/denoising.conda_env.yml"
