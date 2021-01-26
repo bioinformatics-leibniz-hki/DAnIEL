@@ -7,7 +7,7 @@ output:
     df_print: paged
 params:
   reports_dir: /sbidata/server/daniel/latest/repo/back_end/reports/
-  project_dir: /sbidata/server/daniel/latest/userdat/test_wo_nonfungal/
+  project_dir: /sbidata/server/daniel/latest/userdat/test_dada2/
   db_dir: /sbidata/server/daniel/latest/db
 ---
 
@@ -110,7 +110,7 @@ alpha_div_metrics <- try(
 )
 ```
 
-```{r, eval = denoising_params$denoising_method == "dada2", include = FALSE}
+```{r, eval = denoising_params$denoising_method == "asv_dada2", include = FALSE}
 itsx_taxa <- list(
   F = "Fungi",
   Unknown = "Unknown",
@@ -171,8 +171,8 @@ raw_denoised_tbl <-
 - Final number of reads per sample ranged `r {read_counts_tbl$final %>% summary_text(num_fmt = ".1e")}`
 - Zero inflation ranged `r {zero_inflation_tbl$zero_inflation %>% summary_text(percentage = TRUE, num_fmt = ".1f")}` in the samples
 
-```{rmd, eval = denoising_params$exclude_non_fungal}
-- `r {raw_denoised_tbl$sample_id %>% setdiff(denoised_tbl$sample_id) %>% unique() %>% length()}` samples were excluded due to no fungal hits, nameley: `r {raw_denoised_tbl$sample_id %>% setdiff(denoised_tbl$sample_id) %>% unique() %>% paste0(collapse = ", ")}`
+```{rmd, eval = denoising_params$denoising_method == "asv_dada2"}
+ - `r {raw_denoised_tbl$sample_id %>% setdiff(denoised_tbl$sample_id) %>% unique() %>% length()}` samples were excluded due to no fungal hits, nameley: `r {raw_denoised_tbl$sample_id %>% setdiff(denoised_tbl$sample_id) %>% unique() %>% paste0(collapse = ", ")}`
 ```
 
 ```{rmd, eval = 'data.frame' %in% class(alpha_div_tbl)}
@@ -320,7 +320,7 @@ denoised_tbl %>%
   danielLib::plot_alpha_diversity(samples_tbl = samples_tbl)
 ```
 
-```{r, eval = denoising_params$exclude_non_fungal, fig.cap="Contamination detected and filtered by ITSx"}
+```{r, eval = denoising_params$denoising_method == "asv_dada2", fig.cap="Contamination detected and filtered by ITSx"}
 raw_denoised_tbl %>%
   ggplot(aes(sample_id, abundance, fill = taxon)) +
   geom_bar(stat = "identity") +
