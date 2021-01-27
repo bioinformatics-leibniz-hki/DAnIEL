@@ -6,13 +6,13 @@ output:
     theme: null
     df_print: kable
 params:
-  reports_dir: /sbidata/server/daniel/src/back_end/reports/
-  project_dir: /sbidata/server/daniel/userdat/test_sra/
-  db_dir: /sbidata/server/daniel/db/
+  reports_dir: /sbidata/server/daniel/latest/src/back_end/reports/
+  project_dir: /sbidata/server/daniel/latest/userdat/test_example/
+  db_dir: /sbidata/server/daniel/latest/db/
 ---
 
 ```{r, include=FALSE}
-  source("defaults.R")
+source("defaults.R")
 
 library(vegan)
 library(phyloseq)
@@ -97,7 +97,8 @@ try(
  danielLib::plot_abundance_clustermap(
   features_tbl = features_tbl,
   normalization_method = features_params$normalization_method,
-  taxonomic_rank = features_params$taxonomic_rank
+  taxonomic_rank = features_params$taxonomic_rank,
+  clustering_distance = "euclidean"
 )
 )
 ```

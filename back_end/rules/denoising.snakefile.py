@@ -144,8 +144,15 @@ rule pipits:
                 "../envs/denoising.conda_env.yml"
         shell:
                 """
-                pipits_combine_samples.R {params.denoising_dir} && \
-                        touch {output}
+                pipits_combine_samples.R {params.denoising_dir}
+
+                ln {params.denoising_dir}/raw_denoised.fasta \
+                    {params.denoising_dir}/denoised.fasta
+
+                ln {params.denoising_dir}/raw_denoised.csv \
+                    {params.denoising_dir}/denoised.csv
+
+                touch {output}
                 """
 
 rule pipits_parse_repseqs:
@@ -233,7 +240,8 @@ rule pipits_process:
         params:
                 out_dir = DENOISING_DIR + "pipits/3-process",
                 db_dir = DB_DIR + "pipits_db",
-                identity_threshold = DENOISING_PARAMS["identity_threshold"]
+                identity_threshold = DENOISING_PARAMS["identity_threshold"],
+                include_singletons = DENOISING_PARAMS["include_singletons"]
         threads:
                 MAX_THREADS
         conda:
@@ -248,6 +256,8 @@ rule pipits_process:
                         -o {params.out_dir} \
                         -d {params.identity_threshold} \
                         -t {threads} \
+                        $([[ "{params.include_singletons}" == "False" ]] \
+                            && echo "--includeuniqueseqs") \
                         --unite 02.02.2019 && \
                 # remove db link
                 rm -rf pipits_db

@@ -244,9 +244,14 @@ panel_phylotyping <- function(ns, ...) {
 
 panel_pipits <- function(ns = shiny::NS("start_mod")) {
   shiny::div(
+    shiny::checkboxInput(
+      inputId = ns("include_singletons"),
+      label = "PIPITS Include singletons",
+      value = FALSE
+    ) %>% update_label(),
     shiny::numericInput(
       inputId = ns("identity_threshold"),
-      label = "OTU identity threshold",
+      label = "PIPITS identity threshold",
       value = 0.97,
       min = 0,
       max = 1,
@@ -257,27 +262,27 @@ panel_pipits <- function(ns = shiny::NS("start_mod")) {
 
 panel_dada2 <- function(ns = shiny::NS("start_mod")) {
   shiny::div(
-    shiny::numericInput(
-      inputId = ns("max_n"),
-      label = "Maximal number of undefined bases",
-      value = 0,
-      min = 0,
-    ) %>% update_label(),
+    # shiny::numericInput(
+    #   inputId = ns("max_n"),
+    #   label = "Maximal number of undefined bases",
+    #   value = 0,
+    #   min = 0,
+    # ) %>% update_label(),
     shiny::numericInput(
       inputId = ns("min_q"),
-      label = "Minimal base quality",
+      label = "DADA2 Minimal base quality",
       value = 0,
       min = 0,
     ) %>% update_label(),
     shiny::numericInput(
       inputId = ns("trunc_q"),
-      label = "Truncate quality",
+      label = "DADA2 truncate quality",
       value = 2,
       min = 0,
     ) %>% update_label(),
     shiny::textInput(
       inputId = ns("max_ee"),
-      label = "Maximal expected errors",
+      label = "DADA2 Maximal expected errors",
       value = "2,2",
     ) %>% update_label()
   )
@@ -298,11 +303,6 @@ panel_denoising <- function(ns, ...) {
       label = "Denoising method",
       choices = c("OTU (PIPITS)" = "otu_pipits", "ASV (DADA2)" = "asv_dada2"),
       selected = "asv_dada2"
-    ) %>% update_label(),
-    shiny::checkboxInput(
-      inputId = ns("include_singletons"),
-      label = "Include singletons",
-      value = FALSE
     ) %>% update_label(),
     shiny::uiOutput(ns("panel_dada2")),
     shiny::uiOutput(ns("panel_pipits"))
@@ -411,7 +411,7 @@ remove_muxed <- function(samples, input_mod) {
 
 save_project_json <- function(project, input, input_mod) {
   browser()
-  
+
   # adding default parameter set to project
   input_l <- shiny::isolate(reactiveValuesToList(input))
 
@@ -600,7 +600,7 @@ start_mod <- function(input, output, session, project, input_mod) {
   output$panel_dada2 <- shiny::renderUI(panel_dada2())
   output$panel_blast <- shiny::renderUI(panel_blast())
   message("here")
-  
+
   shiny::observeEvent(
     eventExpr = input$denoising_method,
     handlerExpr = {

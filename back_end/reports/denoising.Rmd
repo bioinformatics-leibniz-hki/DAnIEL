@@ -7,7 +7,7 @@ output:
     df_print: paged
 params:
   reports_dir: /sbidata/server/daniel/latest/repo/back_end/reports/
-  project_dir: /sbidata/server/daniel/latest/userdat/test_dada2/
+  project_dir: /sbidata/server/daniel/latest/userdat/test_pipits/
   db_dir: /sbidata/server/daniel/latest/db
 ---
 
