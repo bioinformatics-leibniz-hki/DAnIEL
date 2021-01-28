@@ -587,6 +587,8 @@ if (one_way_aov_cols %>% length() > 0) {
     tidyr::unnest(test) %>%
     adjust_pval_if_possible()
 
+  if(is.null(one_way_aov_test_tbl$error)) {
+  
   one_way_aov_post_hoc_test_groups_tbl <-
     one_way_aov_test_tbl %>%
     dplyr::filter(p.value <= args$max_pvalue) %>%
@@ -614,6 +616,7 @@ if (one_way_aov_cols %>% length() > 0) {
   test_tbl %<>%
     dplyr::bind_rows(one_way_aov_test_tbl) %>%
     dplyr::bind_rows(one_way_aov_post_hoc_test_tbl)
+  }
 }
 
 if (cor_cols %>% length() > 0) {
