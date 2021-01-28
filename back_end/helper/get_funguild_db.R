@@ -69,11 +69,20 @@ get_lineages <- function(taxon) {
   if(taxon %in% lineages_tbl$phylum) return(get_lineage(taxon, "phylum"))
 }
 
+# adopted from https://stackoverflow.com/questions/3809401/what-is-a-good-regular-expression-to-match-a-url
+# added suffix [A-z0-9]+ to exclude strings ending with e.g. )
+url_regex <- paste0(
+  "(?!mailto:)(?:(?:http|https|ftp)://)(?:\\S+(?::\\S*)?@)?(?:(?:(?:[1-9]\\d?|1\\d\\d|2[01]\\d|22[0-3])",
+  "(?:\\.(?:1?\\d{1,2}|2[0-4]\\d|25[0-5])){2}(?:\\.(?:[0-9]\\d?|1\\d\\d|2[0-4]\\d|25[0-4]))|(?:(?:[a-z\\u00a1-\\uffff0-9]+-?)*",
+  "[a-z\\u00a1-\\uffff0-9]+)(?:\\.(?:[a-z\\u00a1-\\uffff0-9]+-?)*[a-z\\u00a1-\\uffff0-9]+)*(?:\\.(?:[a-z\\u00a1-\\uffff]{2,})))|localhost)",
+  "(?::\\d{2,5})?(?:(/|\\?|#)[^\\s]*)?[A-z0-9]+"
+)
+
 lineages_tbl <-
   "/sbidata/server/daniel/latest/db/phylogenies/index_fungorum_2016/taxonomy.csv.gz" %>%
   read_csv()
 
-  funguild_db <-
+funguild_db <-
   "http://www.stbates.org/funguild_db_2.php" %>%
   read_lines() %>%
   enframe() %>%
@@ -93,4 +102,5 @@ lineages_tbl <-
   mutate(lineages = taxon %>% map(get_lineages)) %>%
   unnest(lineages) %>%
   # get species and genus names if they aren't in the lineage table
-  extract_species_genus_names()
+  extract_species_genus_names() %>%
+  mutate(url = citationSource %>% str_extract(url_regex))
