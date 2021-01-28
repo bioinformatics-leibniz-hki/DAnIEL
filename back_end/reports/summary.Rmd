@@ -6,9 +6,9 @@ output:
     theme: null
     df_print: kable
 params:
-  reports_dir: /sbidata/server/daniel/src/dev/back_end/reports/
-  project_dir: /sbidata/server/daniel/userdat/example
-  db_dir: /sbidata/server/daniel/db
+  reports_dir: /sbidata/server/daniel/latest/repo/back_end/reports/
+  project_dir: /sbidata/server/daniel/latest/userdat/test_example
+  db_dir: /sbidata/server/daniel/latest/db
 ---
 
 ```{r, include=FALSE}
@@ -29,14 +29,14 @@ features_params <- project$params$features_params[[selected_params$features]]
 
 pval_max <- analysis_params$max_pvalue
 
+findings_tbl <- tibble::tibble()
+```
+
+```{r, include=FALSE, eval= paste0(statistics_dir, "stat.csv") %>% file.exists()}
 stat_tbl <-
   paste0(statistics_dir, "stat.csv") %>%
   readr::read_csv()
 
-findings_tbl <- tibble::tibble()
-```
-
-```{r, include=FALSE, eval=stat_tbl %>% nrow() > 0}
 stat_tbl <-
   stat_tbl %>%
   dplyr::mutate(relationship_type = "statistics") %>%
@@ -90,7 +90,8 @@ findings_tbl <-
 findings_features <-
   findings_tbl %>%
   pull(feature) %>%
-  unique()
+  unique() %>%
+  map_chr(~ .x %>% str_remove(" sp.$"))
 
 lineage_tbl <-
   paste0(params$db_dir, "/phylogenies/index_fungorum_2016/taxonomy.csv.gz") %>%
@@ -150,10 +151,21 @@ infections_tbl <-
     interaction = sprintf("<i>%s</i> was found in %s", species, source)
   )
 
+funguild_features <- c("guild", "trophicMode", "growthForm", "confidenceRanking", "url", "citationSource")
+funguild_tbl <-
+  base::paste0(params$db_dir, "/etc/FUNGuild.csv") %>%
+  readr::read_csv() %>%
+  dplyr::distinct_at(c("taxon", features_params$taxonomic_rank, funguild_features)) %>%
+  #tidyr::pivot_longer(cols = funguild_features) %>%
+  dplyr::rename(feature = !!sym(features_params$taxonomic_rank)) %>%
+  dplyr::mutate(relationship_type = "funguild") %>%
+  dplyr::filter(feature %in% findings_features)
+
 findings_tbl <-
   findings_tbl %>%
   dplyr::full_join(interactions_tbl) %>%
-  dplyr::full_join(infections_tbl)
+  dplyr::full_join(infections_tbl) %>%
+  dplyr::full_join(funguild_tbl)
 
 findings_tbl %>%
   readr::write_csv(paste0(analysis_dir, "summary/findings.csv"))
@@ -215,6 +227,21 @@ summary_html <- function(findings_tbl, relationship_type) {
         dplyr::pull(relationship_html) %>%
         paste(collapse = " ") %>%
         paste0("Clinical isolates with suspicious fungal infections: <br> <ul>", ., "</ul>")
+    },
+    "funguild" = {
+      findings_tbl %>%
+        dplyr::mutate(reference = case_when(
+          ! is.na(url) ~ stringr::str_glue("<a href='{url}' title='{citationSource}'>Reference</a>"),
+          ! is.na(citationSource) ~ stringr::str_glue("<div title='{citationSource}'>Reference</div>"),
+          TRUE ~ ""
+        )) %>%
+        dplyr::mutate(relationship_html = stringr::str_glue(
+          "<li>{growthForm} <i>{taxon}</i> is of guild {guild} ",
+          "and trophic mode {trophicMode} ({confidenceRanking}, {reference})"
+        )) %>%
+        dplyr::pull(relationship_html) %>%
+        paste(collapse = " ") %>%
+        paste0("Functions (FUNGuild): <br> <ul>", ., "</ul>")
     },
     paste0(relationship_type, " not yet implemented.")
   )
