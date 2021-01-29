@@ -232,7 +232,7 @@ summary_html <- function(findings_tbl, relationship_type) {
       findings_tbl %>%
         dplyr::mutate(reference = case_when(
           ! is.na(url) ~ stringr::str_glue("<a href='{url}' title='{citationSource}'>Reference</a>"),
-          ! is.na(citationSource) ~ stringr::str_glue("<div title='{citationSource}'>Reference</div>"),
+          ! is.na(citationSource) ~ citationSource,
           TRUE ~ ""
         )) %>%
         dplyr::mutate(relationship_html = stringr::str_glue(
