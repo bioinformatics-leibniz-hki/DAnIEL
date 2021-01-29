@@ -20,10 +20,12 @@ denoising_mod_UI <- function(id) {
   shiny::fluidPage(
     width = NULL,
     shiny::uiOutput(ns("static_report")),
-
     shiny::div(
       id = ns("interactive"),
       shiny::h2("Interactive analysis"),
+      shiny::h3("Alignment of denoised sequences"),
+      msaR::msaROutput(outputId = ns("msa_denoised"), width = "100%", height = "800px"),
+      shiny::h3("Alpha diversity"),
       shiny::div("Representative sequences (ASV or OTUs) of denoised reads are used to calculate diversity for each sample."),
       boxplot_mod_UI(ns("boxplot_mod")),
       shiny::h2("Download"),
@@ -94,7 +96,7 @@ denoising_mod <- function(input, output, session, project) {
   alphadiv_tbl <- shiny::reactive({
     shiny::req(denoised_tbl() %>% nrow() > 0)
     shinyjs::show("interactive")
-    
+
     danielLib::get_alpha_diversity_all(denoised_tbl())
   })
 
@@ -110,6 +112,24 @@ denoising_mod <- function(input, output, session, project) {
       shiny::includeHTML() %>%
       shiny::HTML()
   }
+
+  output$msa_denoised <- msaR::renderMsaR({
+    denoised_fasta_msa_path <-
+      paste0(denoising_dir, "/denoised.aligned.fasta")
+
+    shiny::need(file.exists(denoised_fasta_msa_path), message = "Alignment file not found") %>%
+      shiny::validate()
+
+    msaR::msaR(
+      msa = denoised_fasta_msa_path,
+      menu = TRUE,
+      overviewbox = TRUE,
+      overviewboxHeight = 80,
+      seqlogo = FALSE,
+      rowheight = 15,
+      alignmentHeight = 600
+    )
+  })
 
   output$download_rep_seqs <- shiny::downloadHandler(
     filename = "denoised.fasta",

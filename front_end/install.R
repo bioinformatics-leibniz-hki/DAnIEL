@@ -5,7 +5,7 @@
 # Research Group Systems Biology and Bioinformatics - Head: Assoc. Prof. Dr. Gianni Panagiotou
 # https://www.leibniz-hki.de/en/systembiologie-und-bioinformatik.html
 # Leibniz Institute for Natural Product Research and Infection Biology - Hans Knöll Institute (HKI)
-# Adolf-Reichwein-Straße 23, 07745 Jena, Germany
+# Adolf-Reichwein-Straße 23, 07745 Jena,Germany
 #
 # The project code is licensed under BSD 2-Clause.
 # See the LICENSE file provided with the code for the full license.
@@ -14,25 +14,71 @@
 # Installing front end dependencies
 #
 
-libpath <- .libPaths()[1]
-message(base::paste("Installing R packages to ", libpath))
+options(
+  Ncpus = as.integer(system("nproc", intern = TRUE))
+)
 
-Ncpus <- 15
+libpath <- .libPaths()[1]
+message(base::paste(
+  "Installing R packages to ",
+  libpath
+))
+
 
 # install CRAN packages
 pkgs <- c(
-  "jsonlite", "devtools", "shiny", "shinyjs", "shinycssloaders", "visNetwork", "caret", "lplyr",
-  "sparkline", "shinydashboard", "tidyverse", "magrittr", "DT", "viridis", "formattable", "shinyBS",
-  "readr", "writexl", "utils", "optparse", "lplyr", "BiocManager", "kableExtra", "bsplus", "ggiraph",
-  "grid", "scales", "htmlwidgets", "uuid", "phyloseq", "ggrepel", "ggnewscale", "ggpubr", "shinythemes",
-  "dunn.test", "svglite"
+  "dunn.test",
+  "grid",
+  "readr",
+  "sparkline",
+  "BiocManager",
+  "DT",
+  "bsplus",
+  "caret",
+  "devtools",
+  "formattable",
+  "ggiraph",
+  "ggnewscale",
+  "ggpubr",
+  "ggrepel",
+  "htmlwidgets",
+  "jsonlite",
+  "kableExtra",
+  "lplyr",
+  "lplyr",
+  "magrittr",
+  "optparse",
+  "phyloseq",
+  "scales",
+  "shiny",
+  "shinyBS",
+  "shinycssloaders",
+  "shinydashboard",
+  "shinyjs",
+  "shinythemes",
+  "svglite",
+  "tidyverse",
+  "utils",
+  "uuid",
+  "viridis",
+  "visNetwork",
+  "writexl"
 )
 
-utils::install.packages(pkgs, lib = libpath, Ncpus = Ncpus)
+utils::install.packages(pkgs, lib = libpath)
 
-# install devtools packages
-# devtools::install_github("CannaData/shinyCAPTCHA", upgrade = "never")
+devtools::install_version(
+  package = "msaR",
+  version = "0.5.0",
+  repos = "http://cran.rstudio.com",
+  upgrade = "never"
+)
 
 # install Bioconductor packages
-bioc_pkgs <- c("ggtree", "Biostrings", "ComplexHeatmap", "phyloseq")
-BiocManager::install(bioc_pkgs, Ncpus = Ncpus)
+bioc_pkgs <- c(
+  "ggtree",
+  "Biostrings",
+  "ComplexHeatmap",
+  "phyloseq"
+)
+BiocManager::install(bioc_pkgs)

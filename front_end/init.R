@@ -14,6 +14,7 @@
 # Initialization script run at every start of the shiny front end app
 #
 
+library(msaR)
 library(jsonlite)
 library(lplyr)
 library(shiny)
