@@ -6,9 +6,9 @@ output:
     theme: null
     df_print: kable
 params:
-  reports_dir: /sbidata/server/daniel/src/latest/back_end/reports/
-  project_dir: /sbidata/server/daniel/userdat/agp75/
-  db_dir: /sbidata/server/daniel/db/
+  reports_dir: /sbidata/server/daniel/latest/repo/back_end/reports/
+  project_dir: /sbidata/server/daniel/latest/userdat/test_no
+  db_dir: /sbidata/server/daniel/latest/db/
 ---
 
 ```{r, include=FALSE}
@@ -65,9 +65,15 @@ read_loss_tbl <-
   tidyr::spread(qc_step, read_count) %>%
   dplyr::transmute(sample_id, read_loss_perc = (Raw - QC) / Raw * 100)
 
-excluded_samples_tbl <-
-  paste0(qc_dir, "/final/excluded_samples.csv") %>%
+excluded_samples_tbl_path <- paste0(qc_dir, "/final/excluded_samples.csv")
+
+if(file.exists(excluded_samples_tbl_path)) {
+  excluded_samples_tbl <-
+   excluded_samples_tbl_path %>%
   danielLib::read_csv_guess_coltypes()
+} else {
+  excluded_samples_tbl <- NULL
+}
 ```
 
 # Quality Control
