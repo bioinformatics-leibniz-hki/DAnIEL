@@ -88,20 +88,26 @@ if ("per_tile_sequence_quality" %in% colnames(tests_tbl)) {
   tests_tbl <- dplyr::mutate(tests_tbl, fastqc_per_tile_sequence_quality_failed = "")
 }
 
-excluded_samples_tbl <-
-  tests_tbl %>%
-  dplyr::select(sample_id, mate_id, args$qc_exclusion_criteria) %>%
-  tidyr::gather(test, test_result, -sample_id, -mate_id) %>%
-  dplyr::group_by(sample_id) %>%
-  dplyr::filter(test_result == TRUE) %>%
-  dplyr::select(-test_result) %>%
-  dplyr::rename(reason = test) %T>%
-  readr::write_csv(paste(out_dir, "excluded_samples.csv", sep = "/"))
+if(length(args$qc_exclusion_criteria) > 0) {
+  excluded_samples_tbl <-
+    tests_tbl %>%
+    group_by(sample_id, mate_id) %>%
+    dplyr::select_if(names(.) %in% args$qc_exclusion_criteria) %>%
+    tidyr::gather(test, test_result, -sample_id, -mate_id) %>%
+    dplyr::group_by(sample_id) %>%
+    dplyr::filter(test_result == TRUE) %>%
+    dplyr::select(-test_result) %>%
+    dplyr::rename(reason = test) %T>%
+    readr::write_csv(paste(out_dir, "excluded_samples.csv", sep = "/"))
+  
+  excluded_samples <-
+    excluded_samples_tbl %>%
+    dplyr::pull(sample_id) %>%
+    base::unique()
+} else {
+  excluded_samples <- NULL
+}
 
-excluded_samples <-
-  excluded_samples_tbl %>%
-  dplyr::pull(sample_id) %>%
-  base::unique()
 
 # link reads passed all qc tests
 reads_after_dir <- base:::paste0(args$qc_dir, "after")

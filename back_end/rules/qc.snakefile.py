@@ -26,20 +26,19 @@ rule create_trimming_fasta:
                 additional_adapter_files = QC_PARAMS["additional_adapter_files"],
                 include_revcomp_primers = QC_PARAMS["include_revcomp_primers"] and QC_PARAMS["adapter_fasta"] != "",
                 adapter_dir = DB_DIR + "adapters/"
-        conda:
-                "../envs/qc.conda_env.yml"
-        shell:
-                """
-                cd {params.adapter_dir}
-                cat {params.additional_adapter_files} > {output}
-                echo "\n{params.adapter_fasta}" >> {output}
+        run:
+            import os
+            with open(str(output), "a+") as adapter_file:
+                for f in params["additional_adapter_files"]:
+                    f = params["adapter_dir"] + f
+                    adapter_file.write(f.read())
 
-                # include reverse complement if adapter fasta is provided and
-                # rev comp option in parameter set is set
-                if [ "{params.include_revcomp_primers}" == "True" ]; then
-                         add_fasta_reverse_comp.sh <(echo -e "{params.adapter_fasta}") {output}
-                fi
-                """
+                if len(params["adapter_fasta"]) > 0:
+                    adapter_file.write(params["adapter_fasta"])
+
+            if params["include_revcomp_primers"]:
+                os.system(f"add_fasta_reverse_comp.sh <(echo -e '{params.adapter_fasta}') {output}")
+
 
 rule before_qc:
         """
@@ -153,9 +152,19 @@ checkpoint final_qc:
         shell:
                 """
                 source deactivate
+
+                if ["{params.qc_exclusion_criteria}" != "OrderedDict()"]; then
+                    exclusion_arg="--qc-exclusion-criteria {params.qc_exclusion_criteria}"
+                fi
+
+                echo qc_tests.R \
+                        --qc-dir {params.qc_dir} \
+                        --min-qc-read-count {params.min_qc_read_count} \
+                        $exclusion_arg
+
                 qc_tests.R \
                         --qc-dir {params.qc_dir} \
-                        --qc-exclusion-criteria {params.qc_exclusion_criteria} \
-                        --min-qc-read-count {params.min_qc_read_count}
+                        --min-qc-read-count {params.min_qc_read_count} \
+                        $exclusion_arg
                 touch {output.done}
                 """
