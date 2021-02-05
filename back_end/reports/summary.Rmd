@@ -7,7 +7,7 @@ output:
     df_print: kable
 params:
   reports_dir: /sbidata/server/daniel/latest/repo/back_end/reports/
-  project_dir: /sbidata/server/daniel/latest/userdat/test_example
+  project_dir: /sbidata/server/daniel/latest/userdat/test_no
   db_dir: /sbidata/server/daniel/latest/db
 ---
 
@@ -32,7 +32,7 @@ pval_max <- analysis_params$max_pvalue
 findings_tbl <- tibble::tibble()
 ```
 
-```{r, include=FALSE, eval= paste0(statistics_dir, "stat.csv") %>% file.exists()}
+```{r, include=FALSE, eval = paste0(statistics_dir, "stat.csv") %>% readr::read_csv() %>% nrow() > 0}
 stat_tbl <-
   paste0(statistics_dir, "stat.csv") %>%
   readr::read_csv()
