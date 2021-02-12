@@ -179,18 +179,12 @@ input_mod <- function(input, output, session, project) {
         return()
       }
 
-      if (!all(input$local_files$name %>% str_detect("\\.fq\\.gz"))) {
+      if (!all(input$local_files$name %>% str_detect("_[12]\\.f(ast)?q(\\.gz)?$"))) {
         shiny::showNotification(
-          ui = "All files must be of gzipped FASTQ format with file ending .fq.gz",
-          type = "error",
-          duration = 15
-        )
-        return()
-      }
-
-      if (!all(input$local_files$name %>% str_detect("_[12]\\.raw\\.fq\\.gz"))) {
-        shiny::showNotification(
-          ui = "All FASTQ filenames must fit the pattern {sample_id}_{mate}.raw.fq.gz where {mate} is either 1 or 2.",
+          ui = base::paste0(
+            "Only paired FASTQ files accepted following pattern {sample id}_{mate}.{file extension}.",
+            "File extension must be one of .fastq, .fq, fastq.gz or fq.gz"
+          ),
           type = "error",
           duration = 15
         )
@@ -509,18 +503,32 @@ input_mod <- function(input, output, session, project) {
         return()
       }
 
-      if (all(input$local_files$name %>% stringr::str_detect("_[12]\\.raw\\.fq\\.gz"))) {
-        # all files have the right pattern
-
-        reads_dir <- base::paste0(project$project_dir, "/input/reads/")
-        if (!base::dir.exists(reads_dir)) base::dir.create(reads_dir, recursive = TRUE)
-
-        # save uploaded files. Preserve file names.
-        base::file.copy(
-          from = input$local_files$datapath,
-          to = input$local_files$name %>% base::paste0(reads_dir, .)
-        )
+      if (! any(input$local_files$name %>% stringr::str_detect("_[12]\\.f(ast)?q(\\.gz)?$"))) {
+        return()
       }
+
+      reads_dir <- base::paste0(project$project_dir, "/input/reads/")
+      if (!base::dir.exists(reads_dir)) base::dir.create(reads_dir, recursive = TRUE)
+
+      to_file_paths <-
+        input$local_files$name %>%
+        # unify file extension
+        stringr::str_replace("fastq$", "fq") %>%
+        stringr::str_replace("fastq\\.gz$", "fq.gz") %>%
+        stringr::str_replace("fq$", "raw.fq") %>%
+        stringr::str_replace("fq.gz$", "raw.fq.gz") %>%
+        purrr::map_chr(~ base::paste0(reads_dir, .x))
+
+      # save uploaded files. Preserve file names.
+      base::file.copy(
+        from = input$local_files$datapath,
+        to = to_file_paths
+      )
+
+      # Ensure uploaded file is compressed
+      to_file_paths %>%
+        purrr::discard(~ .x %>% str_ends("gz")) %>%
+        purrr::walk(R.utils::gzip)
     }
   )
 

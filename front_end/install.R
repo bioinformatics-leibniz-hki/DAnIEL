@@ -27,6 +27,7 @@ message(base::paste(
 
 # install CRAN packages
 pkgs <- c(
+  "R.utils",
   "dunn.test",
   "grid",
   "readr",

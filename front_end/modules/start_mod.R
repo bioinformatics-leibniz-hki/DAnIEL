@@ -72,11 +72,11 @@ ALL_PARAM_SET <-
 
 #' names for parameter sets
 SELECTED_STEPS <- list(
-  qc = "Selected QC",
-  denoising = "Selected Denoising",
-  phylotyping = "Selected Phylotyping",
-  features = "Selected Features",
-  analysis = "Selected Analysis"
+  qc = "selected_qc",
+  denoising = "selected_denoising",
+  phylotyping = "selected_phylotyping",
+  features = "selected_features",
+  analysis = "selected_analysis"
 )
 
 panel_banocc <- function(ns = shiny::NS("start_mod")) {
@@ -410,8 +410,6 @@ remove_muxed <- function(samples, input_mod) {
 }
 
 save_project_json <- function(project, input, input_mod) {
-  browser()
-
   # adding default parameter set to project
   input_l <- shiny::isolate(reactiveValuesToList(input))
 
@@ -491,7 +489,8 @@ save_project_json <- function(project, input, input_mod) {
     sra_ids = sra_ids,
     local_samples = base::paste(project$project_dir, "input", "reads", sep = "/") %>%
       base::list.files() %>%
-      stringr::str_remove("_[12]\\.raw\\.fq\\.gz$") %>%
+      # sample id is everything up to the first point
+      stringr::str_remove("_?[12]?\\..*$") %>%
       base::unique() %>%
       remove_muxed(input_mod) %>%
       none_to_empty_vector(),
@@ -662,6 +661,20 @@ start_mod <- function(input, output, session, project, input_mod) {
         shiny::showNotification(
           ui = "The example project is read-only and already processed",
           type = "warning",
+          duration = 15
+        )
+        return()
+      }
+
+      # Ensure file compression is finished
+      if(
+        paste0(USERDAT_DIR, "/", project$project_id, "/input/reads") %>%
+        list.files() %>%
+        purrr::keep(~ .x %>% stringr::str_ends(".gz.tmp")) %>%
+        length() > 0
+      ) {
+        shiny::showNotification(
+          ui = "Please wait until uploaded files are compressed",
           duration = 15
         )
         return()
