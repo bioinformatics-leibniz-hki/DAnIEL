@@ -109,6 +109,7 @@ args <- base::list(
 #    min_abundance_perc = 0.01,
 #    min_prevalence_perc = 5,
 #    group_prevalence = "bodysite",
+#    unknown_strategy = "infer",
 #    normalization_method = "clr",
 #    remove_unassigned = TRUE,
 #    out_norm_csv = "features/Species_low_prev/features.csv",
