@@ -7,7 +7,7 @@ output:
     df_print: paged
 params:
   reports_dir: /sbidata/server/daniel/latest/repo/back_end/reports/
-  project_dir: /sbidata/server/daniel/latest/userdat/test_files2/
+  project_dir: /sbidata/server/daniel/latest/userdat/test_single/
   db_dir: /sbidata/server/daniel/latest/db
 ---
 
@@ -28,6 +28,10 @@ project <-
 selected_params <- danielLib::get_selected_params(project)
 denoising_params <- project$params$denoising_params[[selected_params$denoising]]
 denoising_dir <- paste0(params$project_dir, "/denoising/", stringr::str_replace_all(selected_params$denoising, " ", "_"), "/")
+
+problematic_asvs_path <-
+  denoising_dir %>%
+  paste0("filtered.problematic.txt")
 
 samples_tbl <-
   paste0(params$project_dir, "/input/samples.csv") %>%
@@ -103,6 +107,10 @@ This is done by removing potential sequencing errors.
   purrr::simplify() %>%
   reduce(paste0) %>%
   pander::pander()
+```
+
+```{r, eval = file.exists(problematic_asvs_path), caption = "Problematic sequences"}
+problematic_asvs_path %>% read_tsv(col_names = c("asv", "issue"))
 ```
 
 ```{rmd, eval = !available}
@@ -219,6 +227,7 @@ raw_denoised_tbl <-
 ```{rmd, eval = denoising_params$denoising_method == "asv_dada2"}
  - `r {raw_denoised_tbl$sample_id %>% setdiff(denoised_tbl$sample_id) %>% unique() %>% length()}` samples were excluded due to no fungal hits, nameley: `r {raw_denoised_tbl$sample_id %>% setdiff(denoised_tbl$sample_id) %>% unique() %>% paste0(collapse = ", ")}`
 ```
+
 
 ```{rmd, eval = 'data.frame' %in% class(alpha_div_tbl)}
 - Alpha diversity on denoised level

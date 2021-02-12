@@ -6,9 +6,9 @@ output:
     theme: null
     df_print: kable
 params:
-  reports_dir: /sbidata/server/daniel/src/latest/back_end/reports/
-  project_dir: /sbidata/server/daniel/userdat/example/
-  db_dir: /sbidata/server/daniel/db/
+  reports_dir: /sbidata/server/daniel/latest/repo/back_end/reports/
+  project_dir: /sbidata/server/daniel/latest/userdat/test_single
+  db_dir: /sbidata/server/daniel/latest/db/
 ---
 
 ```{r, include=FALSE}
@@ -24,7 +24,7 @@ phylotyping_params <- project$params$phylotyping_params[[selected_params$phyloty
 phylotyping_dir <- paste0(params$project_dir, "/phylotyping/", stringr::str_replace_all(selected_params$phylotyping, " ", "_"), "/")
 denoising_dir <- paste0(params$project_dir, "/denoising/", stringr::str_replace_all(selected_params$denoising, " ", "_"), "/")
 
-taxa <- c("species", "genus", "family", "order", "class", "phylum")
+taxa <- c("strain", "species", "genus", "family", "order", "class", "phylum")
 
 denoised_tbl <-
   paste0(denoising_dir, "denoised.csv") %>%
@@ -42,7 +42,7 @@ classified_tbl <-
   dplyr::mutate(classified = ! is.na(taxon)) %>%
   dplyr::group_by(taxrank, classified) %>%
   dplyr::count() %>%
-  tidyr::spread(classified, n) %>%
+  tidyr::pivot_wider(names_from = classified, values_from = n, values_fill = list(n = 0)) %>%
   dplyr::ungroup() %>%
   dplyr::mutate(frac_classified = `TRUE` / (`TRUE` + `FALSE`)) %>%
   dplyr::select(taxrank, frac_classified) %>%

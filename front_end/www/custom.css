@@ -1,5 +1,5 @@
 body {
-	max-width: 1000px;
+	max-width: 1500px;
 	margin: auto;
 	background-color: #bbb;
 }
@@ -7,7 +7,7 @@ body {
 .skin-black .wrapper {
 	background-color: #f9f9f9;
 	font-size: 16px;
-	max-width: 1200px;
+	max-width: 1500px;
 }
 
 blockquote {
@@ -17,7 +17,7 @@ blockquote {
 /* header */
 .skin-black .main-header {
 	position: fixed;
-	max-width: 1000px;
+	max-width: 1500px;
 	width: 100%;
 	box-shadow: 0 0 12px 0 rgba(0,0,0,0.3);
 }

@@ -62,6 +62,7 @@ rule dada2_sample:
         output:
                 fasta_path = DENOISING_DIR + "{sample}/denoised.fasta",
                 csv_path = DENOISING_DIR + "{sample}/denoised.csv"
+        log:    DENOISING_DIR + "{sample}/log.txt"
         params:
                 sample = "{sample}",
                 out_dir = DENOISING_DIR + "{sample}/",
@@ -83,7 +84,8 @@ rule dada2_sample:
                         --min-q {params.min_q} \
                         --max-ee {params.max_ee} \
                         --trunc-q {params.trunc_q} \
-                        --min-read-length {params.min_read_length} || \
+                        --min-read-length {params.min_read_length} \
+                        2> {log} || \
                         touch {output.fasta_path} {output.csv_path}
                 """
 

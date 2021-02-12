@@ -49,6 +49,7 @@ services:
                     memory: "5G"
         ports:
             - "80:3838"
+            - "8888:8888"
         volumes:
             - userdat:/userdat
             - db:/db:ro

@@ -59,7 +59,6 @@ Germany
 EOF
 }
 
-source activate base
 while true; do
 	if [ -f "$queue_file" ]; then
 		if [ `wc -l $queue_file | awk '{print $1}'` -ge "1" ]; then
@@ -67,7 +66,8 @@ while true; do
 			echo "Process project $cur_project_id"
 			project_dir=$DANIEL_USERDAT_DIR/$cur_project_id/
 			configfile=$project_dir/input/project.json
-
+			
+			source activate base
 			cd $project_dir
 			snakemake \
 				--keep-going \
@@ -78,6 +78,22 @@ while true; do
 				--configfile $configfile \
 				--jobs $jobs_per_project \
 				--cores $threads
+			source deactivate
+
+			# try to rerun report if missing
+			# e.g. to get a denoising report showing errors even
+			# if denoising fails
+			source deactivate
+			for step in qc denoising phylotyping features; do
+				find . | grep ./$step/ | grep report.html || \
+					report.R  \
+						--in-rmd /app/back_end/reports/$step.Rmd \
+						--project-dir $project_dir/ \
+						--db-dir /db/ \
+						--tmp-dir $(mktemp -d) \
+						--out-html $project_dir/$step/selected_$step/report.html \
+					|| break # downstream reports will fail as well
+			done
 
 			notify_mail $cur_project_id
 			# remove project from queue

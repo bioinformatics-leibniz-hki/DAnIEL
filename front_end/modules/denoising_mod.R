@@ -126,7 +126,7 @@ denoising_mod <- function(input, output, session, project) {
       overviewbox = TRUE,
       overviewboxHeight = 80,
       seqlogo = FALSE,
-      rowheight = 15,
+      rowheight = 18,
       alignmentHeight = 600
     )
   })

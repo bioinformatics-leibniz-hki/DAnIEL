@@ -6,8 +6,8 @@ output:
     theme: null
     df_print: kable
 params:
-  reports_dir: /sbidata/server/daniel/src/latest/back_end/reports/
-  project_dir: /sbidata/server/daniel/userdat/test_pipits/
+  reports_dir: /sbidata/server/daniel/latest/repo/back_end/reports/
+  project_dir: /sbidata/server/daniel/latest/userdat/test_example/
   db_dir: /sbidata/server/daniel/db/
 ---
 
@@ -41,20 +41,6 @@ paste0(ml_dir, "ml.RData") %>% load(envir = ml_env)
 sbf_ctrl <- ml_env$sbf_ctrl
 rfe_ctrl <- ml_env$rfe_ctrl
 ```
-```{r, include=FALSE, eval=ml_env$tested_cols %>% length() > 0}
-models_tbl <-
-  ml_env$models_tbl %>%
-  dplyr::mutate(
-    fs_method = fs_method %>% dplyr::recode(!!!fs_methods_l),
-    clf_method = clf_method %>% dplyr::recode(!!!classifiers_l)
-  )  
-
-best_models_tbl <-
-  models_tbl %>%
-  dplyr::group_by(target) %>%
-  dplyr::arrange(-AUC) %>%
-  dplyr::slice(1)  
-```
 
 
 # Machine Learning
@@ -69,6 +55,31 @@ Furthermore, features which are important in this classification can be identifi
 ```
 ```{r, eval=ml_env$tested_cols %>% length() == 0}
 knitr::knit_exit()
+```
+
+```{rmd, eval=ml_env$models_tbl %>% nrow() == 0}
+## Results
+
+- No model could be trained
+```
+```{r, eval=ml_env$models_tbl %>% nrow() == 0}
+knitr::knit_exit()
+```
+
+
+```{r, include=FALSE, eval=ml_env$tested_cols %>% length() > 0}
+models_tbl <-
+  ml_env$models_tbl %>%
+  dplyr::mutate(
+    fs_method = fs_method %>% dplyr::recode(!!!fs_methods_l),
+    clf_method = clf_method %>% dplyr::recode(!!!classifiers_l)
+  )  
+
+best_models_tbl <-
+  models_tbl %>%
+  dplyr::group_by(target) %>%
+  dplyr::arrange(-AUC) %>%
+  dplyr::slice(1)  
 ```
 
 ## Methods
