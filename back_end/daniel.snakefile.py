@@ -33,7 +33,13 @@ SCRIPT_DIR = os.environ["DANIEL_SCRIPT_DIR"] + "/"
 REPORT_DIR = SCRIPT_DIR + "../reports/"
 
 # samples
-str_to_list = lambda x: [] if x == "" else x
+def str_to_list(x):
+    if x == "":
+        return []
+    if type(x) == str:
+        return [x]
+    return x
+
 META_SAMPLES = str_to_list(config["input"]["meta_samples"])
 LOCAL_SAMPLES = str_to_list(config["input"]["local_samples"])
 PROJECTS = []

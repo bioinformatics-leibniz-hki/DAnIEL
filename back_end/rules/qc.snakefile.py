@@ -29,7 +29,7 @@ rule create_trimming_fasta:
         run:
             import os
             with open(str(output), "a+") as adapter_file:
-                for f in params["additional_adapter_files"]:
+                for f in str_to_list(params["additional_adapter_files"]):
                     f = params["adapter_dir"] + f
                     adapter_file.write(open(f).read())
 
