@@ -7,7 +7,7 @@ output:
     df_print: paged
 params:
   reports_dir: /sbidata/server/daniel/latest/repo/back_end/reports/
-  project_dir: /sbidata/server/daniel/latest/userdat/test_pipits/
+  project_dir: /sbidata/server/daniel/latest/userdat/test_files2/
   db_dir: /sbidata/server/daniel/latest/db
 ---
 
@@ -33,16 +33,16 @@ samples_tbl <-
   paste0(params$project_dir, "/input/samples.csv") %>%
   danielLib::read_csv_guess_coltypes()
 
+available <-
+  paste0(denoising_dir, "denoised.csv") %>%
+  purrr::possibly(read_csv, FALSE)() %>% nrow() > 0
+```
+
+```{r eval = available}
 denoised_tbl <-
   paste0(denoising_dir, "denoised.csv") %>%
   readr::read_csv() %>%
   possibly(tidyr::gather, NULL)(denoised, abundance, -sample_id)
-```
-
-```{r, include = FALSE, eval = denoising_params$denoising_method == "asv_dada2"}
-dada2_l <-
-  paste0(denoising_dir, "denoised.rds") %>%
-  readr::read_rds()
 ```
 
 # Denoising
@@ -55,8 +55,8 @@ This is done by removing potential sequencing errors.
 - Singletons were `r {ifelse(denoising_params$include_singletons, "", "not")}` included
 ```{rmd, eval = denoising_params$denoising_method == "asv_dada2"}
 - ASV profiling was used to generate representative sequences of qc reads [@pmid27214047]. Briefly, sequence differences as little as 1 nucleotide were resolved by modeling the quality score of NGS reads.
+- Quality controlled reads were filtered using function `dada2::filterAndTrim` with arguments maxN = `r {denoising_params$max_n}`, minQ = `r {denoising_params$min_q}`, truncate quality truncQ = `r {denoising_params$trunc_q}`, and maximal expected error  maxEE = `r {denoising_params$max_ee}`
 - DADA2 was performed for each sample and mate separately. Identical representative sequences were merged together.
-- DADA2 key model parameters: `r {dada2_l %>% pluck("dada2_res_l", 1, "fwd_dada", "opts") %>% magrittr::extract(c("OMEGA_A", "OMEGA_C", "BAND_SIZE")) %>% purrr::map2(names(.), ~paste0(.y, "=", .x)) %>% as.character() %>% paste(collapse = ", ")}`
 - Chimeras were removed using a *de novo* consensus approach
 ```
 ```{rmd, eval = denoising_params$denoising_method == "otu_pipits"}
@@ -70,12 +70,56 @@ This is done by removing potential sequencing errors.
 - For the sake of clarity, only the `r {num_repseqs_showed}` most prevalent sequences were shown. The tree, however, was calculated based on all representative sequences
 
 ## Results
+```{rmd, eval = !available}
+- Denoising failed
+```
+
+```{r, eval = !available && denoising_params$denoising_method == "otu_pipits"}
+"denoising/selected_denoising/pipits/1-seqprep/output.log" %>% readr::read_file() %>% cat()
+```
+
+```{r, eval = !available && denoising_params$denoising_method == "asv_dada2"}
+"denoising/selected_denoising/" %>%
+  list.files(pattern = "log.txt$", recursive = TRUE, full.names = TRUE) %>%
+  map(~ {
+    header <-
+      .x %>%
+      str_remove_all("^denoising/selected_denoising|[.]+|\\log.txt|/") %>%
+      paste0("- ", ., "\n")
+    
+    content <-
+      .x %>%
+      read_file() %>% 
+      # Merge error messages in one line
+      str_replace_all(": \n", ":") %>%
+      str_split("\n") %>%
+      first() %>%
+      keep(~ .x %>% str_detect("Dereplicating|Encountered|merged|Error")) %>%
+      map_chr(~ paste0("\t- ", ., "\n")) %>%
+      reduce(paste0)
+
+    paste0(header, content, "\n")
+  }) %>%
+  purrr::simplify() %>%
+  reduce(paste0) %>%
+  pander::pander()
+```
+
+```{rmd, eval = !available}
+## References
+```
+
+```{r, eval = !available}
+knitr::knit_exit()
+```
+
 ```{rmd, eval=is.null(denoised_tbl)}
 - Denoised abundance table did not contain any hit
 
 ## References
 ```
-```{r, eval=is.null(denoised_tbl)}
+
+```{r, eval = is.null(denoised_tbl)}
 knitr::knit_exit()
 ```
 
@@ -85,6 +129,7 @@ zero_inflation_tbl <-
   denoised_tbl %>%
   dplyr::group_by(sample_id, is_zero_inflated = abundance == 0) %>%
   dplyr::count() %>%
+  tidyr::complete(is_zero_inflated = c(TRUE, FALSE), fill = list(n = 0)) %>%
   tidyr::spread(is_zero_inflated, n) %>%
   dplyr::transmute(zero_inflation = `TRUE` / sum(`TRUE` + `FALSE`) * 100) 
 
@@ -202,6 +247,10 @@ plot_girafe(zero_inflation_plt)
 ```
 
 ```{r, eval = denoising_params$denoising_method == "asv_dada2", fig.cap="DADA2 error model"}
+dada2_l <-
+  paste0(denoising_dir, "denoised.rds") %>%
+  readr::read_rds()
+
 dada2_l %>%
   purrr::pluck("dada2_err_tbl") %>%
   # ensure quality score is factor to allow multiple boxplots
