@@ -31,7 +31,7 @@ rule create_trimming_fasta:
             with open(str(output), "a+") as adapter_file:
                 for f in params["additional_adapter_files"]:
                     f = params["adapter_dir"] + f
-                    adapter_file.write(f.read())
+                    adapter_file.write(open(f).read())
 
                 if len(params["adapter_fasta"]) > 0:
                     adapter_file.write(params["adapter_fasta"])
@@ -156,11 +156,6 @@ checkpoint final_qc:
                 if ["{params.qc_exclusion_criteria}" != "OrderedDict()"]; then
                     exclusion_arg="--qc-exclusion-criteria {params.qc_exclusion_criteria}"
                 fi
-
-                echo qc_tests.R \
-                        --qc-dir {params.qc_dir} \
-                        --min-qc-read-count {params.min_qc_read_count} \
-                        $exclusion_arg
 
                 qc_tests.R \
                         --qc-dir {params.qc_dir} \
