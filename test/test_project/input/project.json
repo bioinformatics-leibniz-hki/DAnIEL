@@ -4,11 +4,13 @@
   "project_dir": "/userdat/test_project",
   "params": {
     "qc_params": {
-      "Selected QC": {
+      "selected_qc": {
         "phred_format": "phred33",
         "adapter_fasta": ">Forward primer ITS3\nGCATCGATGAAGAACGCAGC\n>Reverse primer ITS4\nTCCTCCGCTTATTGATATGC",
         "min_read_length": 100,
         "include_revcomp_primers": true,
+        "min_read_length": 50,
+        "qc_error_rate": 0.1,
         "min_quality_trailing": 25,
         "min_quality_leading": 25,
         "additional_adapter_files": ["NexteraPE-PE.fa", "TruSeq2-PE.fa", "TruSeq3-PE-2.fa"],
@@ -17,34 +19,34 @@
       }
     },
     "denoising_params": {
-      "Selected Denoising": {
+      "selected_denoising": {
         "its_region": "ITS2",
         "denoising_method": "asv_dada2",
         "include_singletons": false,
-        "selected_qc_params": "Selected QC"
+        "selected_qc_params": "selected_qc"
       }
     },
     "phylotyping_params": {
-      "Selected Phylotyping": {
-        "ref_database": "unite_8.0_dynamic",
+      "selected_phylotyping": {
+        "ref_database": "unite_8.2_dynamic",
         "sequence_classifier": "qiime2_nb",
         "frac_identity": "0.8",
-        "selected_denoising_params": "Selected Denoising"
+        "selected_denoising_params": "selected_denoising"
       }
     },
     "features_params": {
-      "Selected Features": {
+      "selected_features": {
         "taxonomic_rank": "genus",
         "phylo_database": "index_fungorum_2016",
         "normalization_method": "clr",
         "min_abundance": 0.01,
         "min_prevalence": 5,
         "group_prevalence": "all",
-        "selected_phylotyping_params": "Selected Phylotyping"
+        "selected_phylotyping_params": "selected_phylotyping"
       }
     },
     "analysis_params": {
-      "Selected Analysis": {
+      "selected_analysis": {
         "correlation_method": "sparcc",
         "correlation_grouping": "collection_date",
         "banocc_chains": "10",
@@ -56,11 +58,11 @@
         "correlation_min_samples": 2,
         "correlation_min_features": 5,
         "correlation_min_abs_cor": 0.2,
-        "selected_features_params": "Selected Features"
+        "selected_features_params": "selected_features"
       }
     }
   },
-  "selected_analysis_params": "Selected Analysis",
+  "selected_analysis_params": "selected_analysis",
   "input": {
     "projects": {
       "PRJNA356769": {
