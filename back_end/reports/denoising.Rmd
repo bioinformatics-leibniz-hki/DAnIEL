@@ -7,7 +7,7 @@ output:
     df_print: paged
 params:
   reports_dir: /sbidata/server/daniel/latest/repo/back_end/reports/
-  project_dir: /sbidata/server/daniel/latest/userdat/test_single/
+  project_dir: /sbidata/server/daniel/latest/userdat/test_new_example/
   db_dir: /sbidata/server/daniel/latest/db
 ---
 
@@ -137,7 +137,11 @@ zero_inflation_tbl <-
   denoised_tbl %>%
   dplyr::group_by(sample_id, is_zero_inflated = abundance == 0) %>%
   dplyr::count() %>%
+  
+  # TRUE and FALSE count for every sample
+  dplyr::group_by(sample_id) %>%
   tidyr::complete(is_zero_inflated = c(TRUE, FALSE), fill = list(n = 0)) %>%
+  
   tidyr::spread(is_zero_inflated, n) %>%
   dplyr::transmute(zero_inflation = `TRUE` / sum(`TRUE` + `FALSE`) * 100) 
 
