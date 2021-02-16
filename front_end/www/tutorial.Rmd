@@ -114,9 +114,9 @@ For instance, we will assign these samples to the project `healthy feces`.
 
 Raw read files can contain multiple samples, because this webserver is able to perform  *demultiplexing*.
 However, one has to declare the multiplexed samples in the meta data table.
-Let's have a look at the first lines of the multiplexed raw read file `muxed_S4_S5_1.raw.fq.gz` in FASTQ format:
+Let's have a look at the first lines of the multiplexed raw read file `muxed_S4_S5_1.fq.gz` in FASTQ format:
 ```{bash}
-zcat $DANIEL_DB_DIR/example/reads/muxed_S4_S5_1.raw.fq.gz | head | cut -c 1-80
+zcat $DANIEL_DB_DIR/example/reads/muxed_S4_S5_1.fq.gz | head | cut -c 1-80
 ```
 The bar code sequence is located at the end of the header of each read (every 4th line).
 We need a mapping table to know which bar code belongs to which sample.

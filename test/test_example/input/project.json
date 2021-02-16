@@ -20,7 +20,7 @@
     },
     "denoising_params": {
       "selected_denoising": {
-        "its_region": "ITS1",
+        "its_region": "ITS2",
         "denoising_method": "asv_dada2",
         "include_singletons": false,
         "identity_threshold": 0.97,
