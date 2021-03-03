@@ -3,6 +3,7 @@ bibliography: references.bib
 csl: references.csl
 output:
   html_document:
+    highlight: null
     theme: null
     df_print: paged
 params:
