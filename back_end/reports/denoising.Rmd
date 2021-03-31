@@ -87,7 +87,7 @@ pipits_seqprep_log <- denoising_dir %>% paste0("/pipits/1-seqprep/output.log")
 pipits_funits_log <- denoising_dir %>% paste0("/pipits/2-funits/output.log")
 ```
 
-```{r, eval = !available && denoising_params$denoising_method == "otu_pipits" & file.exists(pipits_seqprep_log)}
+```{r, eval = !available && denoising_params$denoising_method == "otu_pipits" && file.exists(pipits_seqprep_log)}
 pipits_seqprep_log %>% readr::read_file() %>% cat()
 ```
 

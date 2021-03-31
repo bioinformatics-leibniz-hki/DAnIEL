@@ -77,7 +77,7 @@ Furthermore, abundance profiles were normalized to make them comparable between 
 - Abundances of denoised sequences were pooled to `r {features_params$taxonomic_rank}` rank
 - Phylogeny used: `r {phylo_db$name}`: `r {phylo_db$description}`
 - Normalization method used: `r {features_params$normalization_method}`
-- Cumulative sum scaling (css) normalization is used for ordination biplots to ensure non-negative abundance values
+- Total sum scaling (TSS) was used for ordination
 - A feature is considered as prevalent if it's abundance is at least `r {features_params$min_abundance}`%
 - Only features more prevalent than `r {features_params$min_prevalence}`% of all samples were kept for downstream analysis
 - Strategy `r {features_params$unknown_strategy}` was applied to deal with unassigned sequences

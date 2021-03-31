@@ -6,9 +6,9 @@ output:
     theme: null
     df_print: kable
 params:
-  reports_dir: /sbidata/server/daniel/src/back_end/reports/
-  project_dir: /sbidata/server/daniel/userdat/test_banocc/
-  db_dir: /sbidata/server/daniel/db/
+  reports_dir: /sbidata/server/daniel/latest/repo/back_end/reports/
+  project_dir: /sbidata/server/daniel/latest/userdat/example_gut
+  db_dir: /sbidata/server/daniel/latest/db
 ---
 
 ```{r, include=FALSE}
@@ -183,7 +183,7 @@ knitr::knit_exit()
 - No correlation test yielded significance
 ```
 
-```{r, eval = stat_bivariate_tbl %>% filter_significant() %>% dim() %>% purrr::pluck(1) > 0}
+```{r, eval = stat_bivariate_tbl %>% filter_significant() %>% nrow() > 0}
 stat_bivariate_tbl %>%
   filter_significant() %>%
   dplyr::mutate(
@@ -196,13 +196,14 @@ stat_bivariate_tbl %>%
   dplyr::select(
     Grouping = `group_var`, Feature = feature,
     `Paired test` = paired, `p value` = p.value, `q value` = q.value,
-    `Cliff's Delta`, `Log2 FC`, `higher in` = higher.in
+    effsize_unit, effsize_value, `higher in` = higher.in
   ) %>%
+  tidyr::pivot_wider(names_from = effsize_unit, values_from = effsize_value) %>%
   kable(caption = "Significant two means comparisons") %>%
   collapse_rows(columns = 1:2)
 ```
 
-```{r, eval = stat_aov_pre_tbl %>% filter_significant() %>% dim() %>% purrr::pluck(1) > 0}
+```{r, eval = stat_aov_pre_tbl %>% filter_significant() %>% nrow() > 0}
 stat_aov_pre_tbl %>%
   filter_significant() %>%
   dplyr::arrange(feature) %>%
@@ -214,7 +215,7 @@ stat_aov_pre_tbl %>%
   collapse_rows(columns = 1:2)
 ```
 
-```{r, eval = stat_aov_post_tbl %>% filter_significant() %>% dim() %>% purrr::pluck(1) > 0}
+```{r, eval = stat_aov_post_tbl %>% filter_significant() %>% nrow() > 0}
 stat_aov_post_tbl %>%
   filter_significant() %>%
   dplyr::arrange(feature) %>%
@@ -226,7 +227,7 @@ stat_aov_post_tbl %>%
   collapse_rows(columns = 1:2)
 ```
 
-```{r, eval = stat_cor_tbl %>% filter_significant() %>% dim() %>% purrr::pluck(1) > 0}
+```{r, eval = stat_cor_tbl %>% filter_significant() %>% nrow() > 0}
 stat_cor_tbl %>%
   filter_significant() %>%
   dplyr::arrange(feature) %>%
@@ -238,7 +239,7 @@ stat_cor_tbl %>%
   collapse_rows(columns = 1:2)
 ```
 
-```{r, eval = "error" %in% colnames(stat_tbl) && stat_tbl %>% dplyr::filter(! is.na(error)) %>% dim() %>% purrr::pluck(1) > 0}
+```{r, eval = "error" %in% colnames(stat_tbl) && stat_tbl %>% dplyr::filter(! is.na(error)) %>% nrow() > 0}
 stat_tbl %>%
   dplyr::filter(! is.na(error)) %>%
   dplyr::group_by(error) %>%

@@ -77,13 +77,13 @@ args <- base::list(
     help = "normalized profile table output (CSV)"
   ),
   optparse::make_option(
-    opt_str = "--out-css-csv",
+    opt_str = "--out-raw-csv",
     type = "character",
     default = "/dev/null",
-    help = "CSS normalized profile table output (CSV). Used for ordination."
+    help = "raw profile table output (CSV)"
   ),
   optparse::make_option(
-    opt_str = "--out-raw-csv",
+    opt_str = "--out-tss-csv",
     type = "character",
     default = "/dev/null",
     help = "raw profile table output (CSV)"
@@ -297,24 +297,20 @@ norm_table <- function(abundance_tbl, normalization_method, prevalent_taxa, remo
   }
 }
 
-norm_tbl <- norm_table(tbl, args$normalization_method, prevalent_taxa)
-css_tbl <- norm_table(tbl, "css", prevalent_taxa)
 raw_tbl <- norm_table(tbl, "raw", prevalent_taxa)
-
-# write normalized output
-norm_tbl %>%
-  tidyr::spread(taxon, abundance, fill = 0) %>%
-  readr::write_csv(args$out_norm_csv)
-
-# write css normalized output
-css_tbl %>%
-  tidyr::spread(taxon, abundance, fill = 0) %>%
-  readr::write_csv(args$out_css_csv)
-
-# write raw count output
 raw_tbl %>%
   tidyr::spread(taxon, abundance, fill = 0) %>%
   readr::write_csv(args$out_raw_csv)
+
+tss_tbl <- norm_table(tbl, "tss", prevalent_taxa)
+tss_tbl %>%
+  tidyr::spread(taxon, abundance, fill = 0) %>%
+  readr::write_csv(args$out_tss_csv)
+
+norm_tbl <- norm_table(tbl, args$normalization_method, prevalent_taxa)
+norm_tbl %>%
+  tidyr::spread(taxon, abundance, fill = 0) %>%
+  readr::write_csv(args$out_norm_csv)
 
 # create feature meta data
 ranks <- c("strain", "species", "genus", "family", "order", "class", "phylum", "kingdom")
@@ -331,3 +327,4 @@ feature_meta_tbl <-
   dplyr::slice(1) %>%
   dplyr::filter(!base::is.na(feature) & feature %in% prevalent_taxa)
 readr::write_csv(feature_meta_tbl, args$out_meta_csv)
+  

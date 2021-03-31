@@ -25,8 +25,8 @@ rule generate_features:
                 unknown_strategy = FEATURES_PARAMS["unknown_strategy"]
         output:
                 features_norm_csv = FEATURES_DIR + "features.csv",
-                features_css_csv = FEATURES_DIR + "features.css.csv",
                 features_raw_csv = FEATURES_DIR + "features.raw.csv",
+                features_tss_csv = FEATURES_DIR + "features.tss.csv",
                 features_meta_csv = FEATURES_DIR + "features.meta.csv"
         shell:
                 """
@@ -37,8 +37,8 @@ rule generate_features:
                         --samples-meta-csv {input.samples_csv} \
                         --group-prevalence {params.group_prevalence} \
                         --out-norm-csv {output.features_norm_csv} \
-                        --out-css-csv {output.features_css_csv} \
                         --out-raw-csv {output.features_raw_csv} \
+                        --out-tss-csv {output.features_tss_csv} \
                         --out-meta-csv {output.features_meta_csv} \
                         --taxonomic-rank {params.taxonomic_rank} \
                         --min-abundance-perc {params.min_abundance} \
@@ -49,7 +49,7 @@ rule generate_features:
 
 rule generate_phyloseq:
         input:
-                features_csv = FEATURES_DIR + "features.css.csv",
+                features_csv = FEATURES_DIR + "features.tss.csv",
                 samples_csv = INPUT_DIR + "samples.csv"
         output:
                 out_rds = FEATURES_DIR + "phyloseq.rds"
