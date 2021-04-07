@@ -59,6 +59,7 @@ nlme
 optparse
 pROC
 pander
+pbmcapply
 permute
 pillar
 pkgconfig

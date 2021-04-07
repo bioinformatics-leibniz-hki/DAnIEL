@@ -28,6 +28,7 @@ library(purrr)
 library(optparse)
 library(dunn.test)
 library(broom)
+library(pbmcapply)
 
 args <- base::list(
   optparse::make_option(
@@ -68,6 +69,12 @@ args <- base::list(
     type = "double",
     default = 0.05,
     help = "Maximum p value to count significance (0-1)"
+  ),
+  optparse::make_option(
+    opt_str = "--groupings",
+    type = "character",
+    default = NULL,
+    help = "column names of samples-csv used to group samples in single quotes separated by a comma"
   )
 ) %>%
   optparse::OptionParser(
@@ -85,6 +92,16 @@ args <- base::list(
 #    cor_stat_func = "stats::cor.test",
 #    max_pvalue = 0.05
 # )
+
+options(
+  mc.cores = parallel::detectCores()
+)
+
+# parse sample groupings
+args$groupings <-
+  args$groupings %>%
+  stringr::str_split("###") %>%
+  purrr::simplify()
 
 # parse statistics functions
 args$two_groups_stat_func %<>% parse(text = .) %>% eval()
@@ -104,6 +121,7 @@ read_csv_guess_coltypes <- function(csv_path) {
 
   factor_cols <-
     tbl %>%
+    dplyr::select_if( ~ ! .x %>% is.numeric()) %>%
     tidyr::gather(k, v) %>%
     dplyr::filter(!is.na(v)) %>%
     dplyr::group_by(k, v) %>%
@@ -143,7 +161,10 @@ test_cols <-
       # exclude demultiplexing info columns
       !k %in% c("barcode_file", "barcode_seq")
   ) %>%
-  dplyr::pull(k)
+  dplyr::pull(k) %>%
+  intersect(args$groupings)
+
+message("Testing:", test_cols %>% paste0(collapse = ","))
 
 if (test_cols %>% length() == 0) {
   tibble() %>% readr::write_csv(args$out_csv)
@@ -194,7 +215,7 @@ cor_cols <- numeric_cols
 try_func <- function(func, paired, ...) {
   tryCatch(
     expr = func(...) %>% broom::tidy(),
-    error = function(e) tibble::tibble(error = e$message)
+    error = function(e) tibble::tibble(error = e)
   )
 }
 
@@ -580,9 +601,11 @@ if (one_way_aov_cols %>% length() > 0) {
     dplyr::inner_join(features_tbl, by = "sample_id") %>%
     dplyr::group_by(group_var, feature) %>%
     tidyr::nest() %>%
-    dplyr::mutate(test_type = "pre one way AOV") %>%
-    # individual tests
-    dplyr::mutate(test = purrr::map(data, function(data) one_way_aov_test(data, func = args$one_way_aov_stat_func))) %>%
+    dplyr::mutate(test_type = "pre one way AOV") %>% {
+      .x <- .
+      .x[["test"]] <- pbmclapply(.x$data, function(data) one_way_aov_test(data, func = args$one_way_aov_stat_func))
+      .x
+    } %>%
     dplyr::select(-data) %>%
     tidyr::unnest(test) %>%
     adjust_pval_if_possible()
@@ -607,7 +630,7 @@ if (one_way_aov_cols %>% length() > 0) {
 
   # BUG: purrr::map does not work.
   # WORARROUND: use lapply instead
-  one_way_aov_post_hoc_test_tbl$test <- one_way_aov_post_hoc_test_tbl$data %>% lapply(dunn_test)
+  one_way_aov_post_hoc_test_tbl$test <- one_way_aov_post_hoc_test_tbl$data  %>% pbmclapply(dunn_test)
 
   one_way_aov_post_hoc_test_tbl %<>%
     unnest(test) %>%
@@ -644,4 +667,5 @@ test_tbl %<>%
 
 test_tbl %>%
   dplyr::select(-dplyr::matches("data")) %>%
+  dplyr::select(-dplyr::matches("^test$")) %>%
   readr::write_csv(args$out_csv, na = "")

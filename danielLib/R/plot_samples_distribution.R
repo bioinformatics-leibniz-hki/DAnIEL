@@ -13,8 +13,10 @@
 #' Plots their counts as `ggiraph` enabled ggplot
 #' @param samples_tbl sample meta data table with attribute columns
 #' @param min_frac_show minimum faction of x axis to show a label
-plot_samples_distribution <- function(samples_tbl, min_frac_show = 0.2, bg_color = "transparent") {
+plot_samples_distribution <- function(samples_tbl, min_frac_show = 0.2, max_distict_attributes = 20, bg_color = "transparent") {
   samples_tbl %>%
+    dplyr::select_if(~ ! is.numeric(.x)) %>%
+    dplyr::select_if(~ .x %>% unique() %>% length() < max_distict_attributes) %>%
     # select factor columns only
     dplyr::select_if(base::sapply(., base::is.factor) | base::sapply(., base::is.logical)) %>%
     dplyr::mutate_all(~ .x %>%

@@ -56,7 +56,7 @@ FEATURES_PARAM_SET <- c(
 
 #' UI ids for analysis parameters
 ANALYSIS_PARAM_SET <- c(
-  "correlation_method", "correlation_grouping",
+  "analysis_groupings", "correlation_method", "correlation_grouping",
   "banocc_chains", "banocc_iters", "banocc_warmup",
   "banocc_alpha", "sparcc_repetitions"
 )
@@ -133,16 +133,22 @@ panel_analysis <- function(ns, ...) {
   shinyBS::bsCollapsePanel(
     ...,
     title = "Analysis",
-    shiny::textInput(
+    shiny::selectInput(
+      inputId = ns("analysis_groupings"),
+      label = "Analysis columns",
+      choices = "not available",
+      multiple = TRUE
+    ) %>% update_label(),
+    shiny::selectInput(
       inputId = ns("correlation_grouping"),
       label = "Correlation grouping",
-      value = "all"
+      choices = "all"
     ) %>% update_label(),
     shiny::radioButtons(
       inputId = ns("correlation_method"),
       label = "Inter feature correlation method",
       choices = c("SparCC" = "sparcc", "BAnOCC" = "banocc", "Spearman" = "spearman"),
-      selected = "SparCC"
+      selected = "sparcc"
     ) %>% update_label(),
     shiny::uiOutput(ns("panel_banocc")),
     shiny::uiOutput(ns("panel_sparcc"))
@@ -183,9 +189,10 @@ panel_features <- function(ns, ...) {
       min = 0,
       max = 100,
     ) %>% update_label(),
-    shiny::textInput(
+    shiny::selectInput(
       inputId = ns("group_prevalence"),
-      value = "all",
+      choices = "all",
+      selected = "all",
       label = "Prevalence group"
     ) %>% update_label(),
     shiny::radioButtons(
@@ -362,7 +369,7 @@ panel_qc <- function(ns, ...) {
     shiny::numericInput(
       inputId = ns("min_qc_read_count"),
       label = "Minimum number of QC reads",
-      value = 1000
+      value = 100
     ) %>% update_label(),
     shiny::checkboxGroupInput(
       inputId = ns("qc_exclusion_criteria"),
@@ -599,6 +606,36 @@ start_mod <- function(input, output, session, project, input_mod) {
   output$panel_dada2 <- shiny::renderUI(panel_dada2())
   output$panel_blast <- shiny::renderUI(panel_blast())
   message("here")
+  
+  shiny::observeEvent(
+    eventExpr = input_mod$samples_tbl(),
+    handlerExpr = {
+      analysis_groupings <- 
+        input_mod$samples_tbl() %>%
+        colnames()
+      
+      shiny::updateSelectInput(
+        session = session,
+        inputId = "analysis_groupings",
+        choices = analysis_groupings,
+        selected = analysis_groupings %>% head(3)
+      )
+      
+      shiny::updateSelectInput(
+        session = session,
+        inputId = "correlation_grouping",
+        choices = analysis_groupings %>% union("all"),
+        selected = "all"
+      )
+      
+      shiny::updateSelectInput(
+        session = session,
+        inputId = "group_prevalence",
+        choices = analysis_groupings %>% union("all"),
+        selected = "all"
+      )
+    }
+  )
 
   shiny::observeEvent(
     eventExpr = input$denoising_method,

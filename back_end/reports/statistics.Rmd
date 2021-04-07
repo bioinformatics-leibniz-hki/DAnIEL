@@ -7,7 +7,7 @@ output:
     df_print: kable
 params:
   reports_dir: /sbidata/server/daniel/latest/repo/back_end/reports/
-  project_dir: /sbidata/server/daniel/latest/userdat/example_gut
+  project_dir: /sbidata/server/daniel/latest/userdat/example_soil2
   db_dir: /sbidata/server/daniel/latest/db
 ---
 
@@ -71,7 +71,8 @@ significant_tests_count_str <- function(stat_tbl) {
 
 stat_tbl <-
   paste0(statistics_dir, "stat.csv") %>%
-  readr::read_csv()
+  readr::read_csv() %>%
+  dplyr::arrange(-abs(effsize_value))
 
 stat_bivariate_tbl <-
   stat_tbl %>%
@@ -145,6 +146,7 @@ knitr::knit_exit()
 ```
 
 ## Results
+
 ```{rmd, eval = stat_bivariate_tbl %>% any_significant()}
 - Two means tests
   - Significant tests: `r {stat_bivariate_tbl %>% significant_tests_count_str()}`
@@ -172,7 +174,7 @@ knitr::knit_exit()
 ```{rmd, eval = ! (stat_aov_post_tbl %>% any_significant() && stat_aov_pre_tbl %>% any_significant()) }
 - Neither three and more means tests nor post hoc tests yielded any significant result
 ```
-```{rmd, eval = stat_cor_tbl %>% any_significant()}
+```{rmd, eval = FALSE && stat_cor_tbl %>% any_significant()}
 - Correlation tests
   - Significance was evaluated on post hoc test level
   - Number of significant tests: `r {stat_cor_tbl %>% filter_significant() %>% dim() %>% pluck(1) %>% as.character()}`

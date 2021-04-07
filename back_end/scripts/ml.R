@@ -48,6 +48,12 @@ args <- list(
     type = "integer",
     default = 3,
     help = "Mininum number of samples of every target classes. Modelling will be skipped otherwise."
+  ),
+  optparse::make_option(
+    opt_str = "--groupings",
+    type = "character",
+    default = NULL,
+    help = "column names of samples-csv used to group samples in single quotes separated by a comma"
   )
 ) %>%
   optparse::OptionParser(
@@ -63,6 +69,12 @@ args <- list(
 #   threads = 20,
 #   min_samples_per_class = 3
 # )
+
+# parse sample groupings
+args$groupings <-
+  args$groupings %>%
+  stringr::str_split("###") %>%
+  purrr::simplify()
 
 #' Guess column classes from a tibble.
 #' Columns sample_id and project will always be of type character and factor, respectively
@@ -130,7 +142,8 @@ test_cols <-
       # exclude demultiplexing info columns
       !k %in% c("barcode_file", "barcode_seq")
   ) %>%
-  dplyr::pull(k)
+  dplyr::pull(k) %>%
+  intersect(args$groupings)
 
 if (test_cols %>% length() == 0) {
   save.image(args$out_rdata)

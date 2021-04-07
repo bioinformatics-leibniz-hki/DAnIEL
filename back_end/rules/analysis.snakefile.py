@@ -208,12 +208,15 @@ rule statistics:
                 samples_csv = INPUT_DIR + "samples.csv"
         output:
                 out_csv = STATISTICS_DIR + "stat.csv"
+        params:
+                groupings = "###".join(ANALYSIS_PARAMS["analysis_groupings"])
         shell:
                 """
                 source deactivate
                 statistics.R \
                         --features-csv {input.features_csv} \
                         --samples-csv {input.samples_csv} \
+                        --groupings {params.groupings} \
                         --out-csv {output.out_csv}
                 """
 
@@ -225,7 +228,8 @@ rule ml:
                 out_rdata = ML_DIR + "ml.RData"
         params:
                 out_dir = ML_DIR,
-                min_samples_per_class = 3
+                min_samples_per_class = 3,
+                groupings = "###".join(ANALYSIS_PARAMS["analysis_groupings"])
         threads: 10
         shell:
                 """
@@ -236,5 +240,6 @@ rule ml:
                         --samples-csv {input.samples_csv} \
                         --out-rdata {output.out_rdata} \
                         --min-samples-per-class {params.min_samples_per_class} \
+                        --groupings {params.groupings} \
                         --threads {threads}
                 """
