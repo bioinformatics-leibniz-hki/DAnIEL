@@ -209,7 +209,7 @@ rule statistics:
         output:
                 out_csv = STATISTICS_DIR + "stat.csv"
         params:
-                groupings = "###".join(ANALYSIS_PARAMS["analysis_groupings"])
+                groupings = "###".join(str_to_list(ANALYSIS_PARAMS["analysis_groupings"]))
         shell:
                 """
                 source deactivate
@@ -229,7 +229,7 @@ rule ml:
         params:
                 out_dir = ML_DIR,
                 min_samples_per_class = 3,
-                groupings = "###".join(ANALYSIS_PARAMS["analysis_groupings"])
+                groupings = "###".join(str_to_list(ANALYSIS_PARAMS["analysis_groupings"]))
         threads: 10
         shell:
                 """
