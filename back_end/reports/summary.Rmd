@@ -7,7 +7,7 @@ output:
     df_print: kable
 params:
   reports_dir: /sbidata/server/daniel/latest/repo/back_end/reports/
-  project_dir: /sbidata/server/daniel/latest/userdat/test_no
+  project_dir: /sbidata/server/daniel/latest/userdat/example_soil
   db_dir: /sbidata/server/daniel/latest/db
 ---
 
@@ -236,7 +236,7 @@ summary_html <- function(findings_tbl, relationship_type) {
           TRUE ~ ""
         )) %>%
         dplyr::mutate(relationship_html = stringr::str_glue(
-          "<li>{growthForm} <i>{taxon}</i> is of guild {guild} ",
+          "<li>{growthForm %>% replace_na('')} <i>{taxon}</i> is of guild {guild} ",
           "and trophic mode {trophicMode} ({confidenceRanking}, {reference})"
         )) %>%
         dplyr::pull(relationship_html) %>%
