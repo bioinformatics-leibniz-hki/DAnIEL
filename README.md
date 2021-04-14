@@ -15,7 +15,6 @@ A user-friendly web server for fungal ITS amplicon sequencing data
 
 ## Citation
 DAnIEL: A User-Friendly Web Server for Fungal ITS Amplicon Sequencing Data
-
 Daniel Loos, Lu Zhang, Christine Beemelmanns, Oliver Kurzai, Gianni Panagiotou
 bioRxiv 2021.04.12.437814; doi: [10.1101/2021.04.12.437814](https://doi.org/10.1101/2021.04.12.437814)
 
