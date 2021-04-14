@@ -606,28 +606,29 @@ start_mod <- function(input, output, session, project, input_mod) {
   output$panel_dada2 <- shiny::renderUI(panel_dada2())
   output$panel_blast <- shiny::renderUI(panel_blast())
   message("here")
-  
+
   shiny::observeEvent(
     eventExpr = input_mod$samples_tbl(),
     handlerExpr = {
-      analysis_groupings <- 
+      analysis_groupings <-
         input_mod$samples_tbl() %>%
-        colnames()
-      
+        colnames() %>%
+        setdiff("sample_id")
+
       shiny::updateSelectInput(
         session = session,
         inputId = "analysis_groupings",
         choices = analysis_groupings,
         selected = analysis_groupings %>% head(3)
       )
-      
+
       shiny::updateSelectInput(
         session = session,
         inputId = "correlation_grouping",
         choices = analysis_groupings %>% union("all"),
         selected = "all"
       )
-      
+
       shiny::updateSelectInput(
         session = session,
         inputId = "group_prevalence",
@@ -704,11 +705,11 @@ start_mod <- function(input, output, session, project, input_mod) {
       }
 
       # Ensure file compression is finished
-      if(
+      if (
         paste0(USERDAT_DIR, "/", project$project_id, "/input/reads") %>%
-        list.files() %>%
-        purrr::keep(~ .x %>% stringr::str_ends(".gz.tmp")) %>%
-        length() > 0
+          list.files() %>%
+          purrr::keep(~ .x %>% stringr::str_ends(".gz.tmp")) %>%
+          length() > 0
       ) {
         shiny::showNotification(
           ui = "Please wait until uploaded files are compressed",
