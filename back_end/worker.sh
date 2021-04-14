@@ -70,6 +70,7 @@ while true; do
 			snakemake \
 				--keep-going \
 				--nolock \
+				--printshellcmds \
 				--use-conda \
 				--conda-prefix $conda_prefix \
 				--snakefile $snakefile \
