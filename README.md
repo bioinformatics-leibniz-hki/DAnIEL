@@ -13,6 +13,11 @@ A user-friendly web server for fungal ITS amplicon sequencing data
 * Correlation networks
 * Integration of existing cohorts from [NCBI SRA](https://www.ncbi.nlm.nih.gov/sra)
 
+## Citation
+DAnIEL: A User-Friendly Web Server for Fungal ITS Amplicon Sequencing Data
+Daniel Loos, Lu Zhang, Christine Beemelmanns, Oliver Kurzai, Gianni Panagiotou
+bioRxiv 2021.04.12.437814; doi: [10.1101/2021.04.12.437814](https://doi.org/10.1101/2021.04.12.437814)
+
 ## Getting Started
 
 1. Set up environmental variables to paths of this repository and the data base directory (not included):
