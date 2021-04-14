@@ -9,7 +9,7 @@ services:
                 - DANIEL_SCRIPT_DIR=/app/back_end/scripts
                 - DANIEL_DB_DIR=/db
                 - DANIEL_USERDAT_DIR=/userdat
-        image: daniel_backend
+        image: bioinformaticsleibnizhki/daniel_backend
         deploy:
             mode: global
             restart_policy:
@@ -17,15 +17,15 @@ services:
             resources:
                 limits:
                     cpus: "10"
-                    memory: "10G"
+                    memory: "20G"
                 reservations:
                     cpus: "10"
                     memory: "5G"
         ports:
             - "9001:22"
         volumes:
-            - userdat:/userdat
-            - db:/db:ro
+            - ${DANIEL_USERDAT_DIR}:/userdat
+            - ${DANIEL_DB_DIR}:/db:ro
         environment:
             - DANIEL_SCRIPT_DIR=/app/back_end/scripts
             - DANIEL_DB_DIR=/db
@@ -35,7 +35,7 @@ services:
             context: .
             dockerfile: front_end.Dockerfile
             target: production
-        image: daniel_frontend
+        image: bioinformaticsleibnizhki/daniel_frontend
         deploy:
             mode: global
             restart_policy:
@@ -48,24 +48,11 @@ services:
                     cpus: "2"
                     memory: "5G"
         ports:
-            - "80:3838"
+            - "3838:3838"
             - "8888:8888"
         volumes:
-            - userdat:/userdat
-            - db:/db:ro
+            - ${DANIEL_USERDAT_DIR}:/userdat
+            - ${DANIEL_DB_DIR}:/db:ro
         environment:
             - DANIEL_DB_DIR=/db
             - DANIEL_USERDAT_DIR=/userdat
-volumes:
-    db:
-        driver: local
-        driver_opts:
-            type: "none"
-            o: "bind"
-            device: "${DANIEL_DB_DIR}"
-    userdat:
-        driver: local
-        driver_opts:
-            type: "none"
-            o: "bind"
-            device: "${DANIEL_USERDAT_DIR}"

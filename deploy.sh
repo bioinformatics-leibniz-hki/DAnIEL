@@ -17,6 +17,9 @@
 export COMPOSE_DOCKER_CLI_BUILD=1 
 export DOCKER_BUILDKIT=1
 
+docker pull bioinformaticsleibnizhki/daniel_backend
+docker pull bioinformaticsleibnizhki/daniel_frontend
+
 docker-compose build --parallel
 docker-compose up
 

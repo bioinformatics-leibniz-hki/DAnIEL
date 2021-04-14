@@ -353,7 +353,7 @@ Downlaoding raw reads from NCBI SRA
   </p>
   <p>
     Type: integer <br />
-    Default: 100 <br />
+    Default: 50 <br />
   </p>
 </p>
  
@@ -408,7 +408,7 @@ Downlaoding raw reads from NCBI SRA
   </p>
   <p>
     Type: integer <br />
-    Default: 1000 <br />
+    Default: 100 <br />
   </p>
 </p>
  
@@ -420,6 +420,17 @@ Downlaoding raw reads from NCBI SRA
   <p>
     Type: nominal <br />
     Default: <ul><li>fastqc_adapter_content_failed</li> <li>fastqc_per_base_n_content_failed</li> <li>fastqc_per_base_sequence_quality_failed</li> <li>fastqc_per_sequence_quality_scores_failed</li> <li>fastqc_per_sequence_length_distribution_failed</li> <li>min_qc_read_count_failed</li></ul> <br />
+  </p>
+</p>
+ 
+<p>
+  <p>
+    <b>Maximum allowed error rate</b> <br />
+    Maximum allowed error rate in QC trimming (no. of errors divided by length of matching region) <br />
+  </p>
+  <p>
+    Type: integer <br />
+    Default: 0.1 <br />
   </p>
 </p>
  
@@ -447,7 +458,7 @@ Downlaoding raw reads from NCBI SRA
  
 <p>
   <p>
-    <b>Include singletons</b> <br />
+    <b>PIPITS include singletons</b> <br />
     Indication to include denoised sequence clusters with only one single sequence. Not recommended. <br />
   </p>
   <p>
@@ -458,12 +469,67 @@ Downlaoding raw reads from NCBI SRA
  
 <p>
   <p>
+    <b>PIPITS identity threshold</b> <br />
+    Required sequence identity to cluster sequences in the same OTU. This parameters is used by VSEARCH and only applies to OTU profiling. <br />
+  </p>
+  <p>
+    Type: Float [0,1] <br />
+    Default: 0.97 <br />
+  </p>
+</p>
+ 
+<p>
+  <p>
+    <b>DADA2 maximal number of undefined bases</b> <br />
+    After truncation, sequences with more than maxN Ns will be discarded. Note that dada does not allow Ns. Only used by DADA2. <br />
+  </p>
+  <p>
+    Type: Float <br />
+    Default: 0 <br />
+  </p>
+</p>
+ 
+<p>
+  <p>
+    <b>DADA2 minimal base quality</b> <br />
+    After truncation, reads contain a quality score less than minQ will be discarded. Only used by DADA2. <br />
+  </p>
+  <p>
+    Type: integer <br />
+    Default: 0 <br />
+  </p>
+</p>
+ 
+<p>
+  <p>
+    <b>DADA2 maximal expected errors</b> <br />
+    Default Inf (no EE filtering). After truncation, reads with higher than maxEE "expected errors" will be discarded. Expected errors are calculated from the nominal definition of the quality score: EE = sum(10^(-Q/10)). Two values for each mate are separated by a comma. Only used by DADA2. <br />
+  </p>
+  <p>
+    Type: float,float <br />
+    Default: 2,2 <br />
+  </p>
+</p>
+ 
+<p>
+  <p>
+    <b>DADA2 truncate quality</b> <br />
+    Truncate reads at the first instance of a quality score less than or equal to truncQ. Only used by DADA2. <br />
+  </p>
+  <p>
+    Type: integer <br />
+    Default: 2 <br />
+  </p>
+</p>
+ 
+<p>
+  <p>
     <b>Reference database</b> <br />
     Reference database used for taxonomic classification of denoised representative sequences. <br />
   </p>
   <p>
     Type: nominal <br />
-    Default: unite_8.0_dynamic <br />
+    Default: Unite_8.2_dynamic <br />
   </p>
 </p>
  
@@ -474,7 +540,7 @@ Downlaoding raw reads from NCBI SRA
   </p>
   <p>
     Type: nominal <br />
-    Default: qiime2_nb <br />
+    Default: qiime2_blast <br />
   </p>
 </p>
  
@@ -496,7 +562,7 @@ Downlaoding raw reads from NCBI SRA
   </p>
   <p>
     Type: nominal <br />
-    Default: species <br />
+    Default: genus <br />
   </p>
 </p>
  
@@ -557,6 +623,17 @@ Downlaoding raw reads from NCBI SRA
  
 <p>
   <p>
+    <b>Unknown strategy</b> <br />
+    Strategy to treat unassigned sequences classified as unknown. <br />
+  </p>
+  <p>
+    Type: nominal <br />
+    Default: infer <br />
+  </p>
+</p>
+ 
+<p>
+  <p>
     <b>Inter feature correlation method</b> <br />
     Method used to estimate correlations between pairs of features. <br />
   </p>
@@ -569,7 +646,7 @@ Downlaoding raw reads from NCBI SRA
 <p>
   <p>
     <b>Samples meta data</b> <br />
-    File describing meta data about samples. Only sample per row. Must always  include column sample_id. Must include columns barcode_seq and barcode_file for multiplexed files. CSV and XLSX (Excel) allowed. <br />
+    Optional file describing meta data about samples. One sample per row. Must include column sample_id. Must include columns barcode_seq and barcode_file if multiplexed files are used. CSV and XLSX (Excel) allowed. <br />
   </p>
   <p>
     Type: file <br />
@@ -613,10 +690,21 @@ Downlaoding raw reads from NCBI SRA
 <p>
   <p>
     <b>Local raw read files</b> <br />
-    Files to upload. File names must end with .raw.fq.gz. Allowed format: gzipped FASTQ .fq.gz <br />
+    Files to upload. File names must follow pattern {sample_id}_{mate}.{file extension} where {mate} is either 1 or 2. {sample_id} is used to map attributes in samples meta data table if provided. Allowed file extensions: fastq, fq, fq.gz, fastq.gz <br />
   </p>
   <p>
     Type: list of files <br />
+    Default: NA <br />
+  </p>
+</p>
+ 
+<p>
+  <p>
+    <b>Analysis groupings</b> <br />
+    Columns of sample meta data table used to group samples in machine learning and statistics. <br />
+  </p>
+  <p>
+    Type: nominal <br />
     Default: NA <br />
   </p>
 </p>
@@ -684,6 +772,17 @@ Downlaoding raw reads from NCBI SRA
   <p>
     Type: integer <br />
     Default: 200 <br />
+  </p>
+</p>
+ 
+<p>
+  <p>
+    <b>Email address</b> <br />
+    Optional Email address. A HTML analysis report will be sent to this address after the pipeline has finished. You can also save this page as a bookmark to access the project. <br />
+  </p>
+  <p>
+    Type: string <br />
+    Default: NA <br />
   </p>
 </p>
 
