@@ -25,8 +25,6 @@ echo "1 * * * * root find $DANIEL_USERDAT_DIR -maxdepth 1 -mindepth 1 -type d -m
 chmod 600 /etc/cron.d/remove_projects
 service cron start
 
-cp /app/back_end/msmtprc /etc/msmtprc
-
 function notify_mail {
 	project_id=$1
 	email_address=$(grep -oP '(?<="email_address": ")[^"]*' $DANIEL_USERDAT_DIR/$project_id/input/project.json)
