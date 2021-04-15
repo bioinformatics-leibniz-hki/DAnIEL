@@ -42,7 +42,9 @@ Dear Sir or Madam,
 Your project PROJECT in DAnIEL webserver is finished.
 Interactive analysis is available within the next 30 days at https://sbi.hki-jena.de/daniel/latest/?project_id=PROJECT.
 Additionally, we attached a HTML summary report about the project.
-Please do not forget to cite the paper: DAnIEL: a complete webserver for Describing, Analyzing and Integrating fungal Ecology to effectively study the systems of Life.
+Please do not forget to cite the paper:
+DAnIEL: A User-Friendly Web Server for Fungal ITS Amplicon Sequencing Data
+Daniel Loos, Lu Zhang, Christine Beemelmanns, Oliver Kurzai, Gianni Panagiotou bioRxiv 2021.04.12.437814; https://doi.org/10.1101/2021.04.12.437814
 
 Kind regards,
 
