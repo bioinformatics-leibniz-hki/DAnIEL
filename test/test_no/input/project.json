@@ -1,0 +1,79 @@
+{
+  "version": "CI",
+  "project_id": "test_no",
+  "project_dir": "/userdat/test_no",
+  "email_address": "",
+  "params": {
+    "qc_params": {
+      "Selected QC": {
+        "phred_format": "phred33",
+        "adapter_fasta": "",
+        "include_revcomp_primers": false,
+        "min_read_length": 50,
+        "qc_error_rate": 0.1,
+        "min_quality_trailing": 25,
+        "min_quality_leading": 25,
+        "additional_adapter_files": {},
+        "min_qc_read_count": 0,
+        "qc_exclusion_criteria": {}
+      }
+    },
+    "denoising_params": {
+      "Selected Denoising": {
+        "its_region": "ITS2",
+        "denoising_method": "asv_dada2",
+        "include_singletons": false,
+        "identity_threshold": 0.97,
+        "max_n": 0,
+        "min_q": 0,
+        "max_ee": "2,2",
+        "trunc_q": 2,
+        "selected_qc_params": "Selected QC"
+      }
+    },
+    "phylotyping_params": {
+      "Selected Phylotyping": {
+        "ref_database": "unite_8.2_dynamic",
+        "sequence_classifier": "qiime2_nb",
+        "frac_identity": 0.8,
+        "selected_denoising_params": "Selected Denoising"
+      }
+    },
+    "features_params": {
+      "Selected Features": {
+        "taxonomic_rank": "species",
+        "phylo_database": "index_fungorum_2016",
+        "normalization_method": "clr",
+        "min_abundance": 0.01,
+        "min_prevalence": 5,
+        "group_prevalence": "all",
+        "unknown_strategy": "infer",
+        "selected_phylotyping_params": "Selected Phylotyping"
+      }
+    },
+    "analysis_params": {
+      "Selected Analysis": {
+        "correlation_method": "spearman",
+        "correlation_grouping": "all",
+        "banocc_chains": 10,
+        "banocc_iters": 10000,
+        "banocc_warmup": 5000,
+        "banocc_alpha": 0.95,
+        "sparcc_repetitions": 200,
+        "max_pvalue": 0.05,
+        "correlation_min_samples": 2,
+        "correlation_min_features": 5,
+        "correlation_min_abs_cor": 0.2,
+        "selected_features_params": "Selected Features"
+      }
+    }
+  },
+  "selected_analysis_params": "Selected Analysis",
+  "input": {
+    "projects": [],
+    "sra_ids": ["SRR5098710", "SRR5098580", "SRR5098736", "SRR5098677", "SRR5098500", "SRR5098394", "SRR5098370"],
+    "local_samples": [],
+    "muxed_samples": [],
+    "meta_samples": ["SRR5098710", "SRR5098580", "SRR5098736", "SRR5098677", "SRR5098500", "SRR5098394", "SRR5098370"]
+  }
+}
