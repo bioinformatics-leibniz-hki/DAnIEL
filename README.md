@@ -40,8 +40,8 @@ COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose build --parallel
 
 Alternatively, download the docker images from [Docker Hub](https://hub.docker.com/orgs/bioinformaticsleibnizhki):
 ```
-docker pull bioinformaticsleibnizhki/daniel_backend:v1.0
-docker pull bioinformaticsleibnizhki/daniel_frontend:v1.0
+docker pull bioinformaticsleibnizhki/daniel_backend
+docker pull bioinformaticsleibnizhki/daniel_frontend
 ```
 
 The latter method requires to change the image names in the file `docker-compose.yml` to use those pulled from Docker Hub (e.g. replace `ìmage: daniel_backend` with `image: bioinformaticsleibnizhki/daniel_backend:v1.0`).
