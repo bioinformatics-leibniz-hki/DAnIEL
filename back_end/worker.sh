@@ -32,7 +32,7 @@ function notify_mail {
 	# no email address present
 	[[ -z "$email_address" ]] && return 0
 
-	html_report_file=$DANIEL_USERDAT_DIR/$project_id/analysis/Selected_Analysis/summary/all.html
+	html_report_file=$DANIEL_USERDAT_DIR/$project_id/analysis/selected_analysis/summary/all.html
 	
 	cat <<'EOF' \
 	| sed -e "s/PROJECT/$project_id/g" \
