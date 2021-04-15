@@ -36,7 +36,6 @@ rule phylotyping_qiime2_naive_bayes:
                         --i-classifier {params.classifier} \
                         --i-reads {params.denoised_fasta_path} \
                         --o-classification {params.phylotyped_qza} \
-                        --p-n-jobs {threads} && \
                 qiime tools export \
                         --input-path {params.phylotyped_qza} \
                         --output-path {params.phylotyping_dir} && \
