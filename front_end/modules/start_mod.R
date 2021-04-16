@@ -167,7 +167,7 @@ panel_features <- function(ns, ...) {
         "Strain" = "strain", "Species" = "species", "Genus" = "genus",
         "Family" = "family", "Order" = "order", "Class" = "class", "Phylum" = "phylum"
       ),
-      selected = "species"
+      selected = "genus"
     ) %>% update_label(),
     shiny::radioButtons(
       inputId = ns("phylo_database"),
