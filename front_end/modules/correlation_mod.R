@@ -152,11 +152,16 @@ correlation_mod_UI <- function(id) {
               "Order" = "order", "Class" = "class", "Phylum" = "phylum"
             ),
             selected = "order"
+          ),
+          shiny::actionButton(
+            inputId = ns("update_network"),
+            label = "Update network"
           )
         )
       ),
       shiny::tabsetPanel(
         type = "tabs",
+        height = "800px",
         shiny::tabPanel("Network", visNetwork::visNetworkOutput(outputId = ns("network")) %>% withSpinner()),
         shiny::tabPanel("Table", DT::dataTableOutput(outputId = ns("table"), width = "100%") %>% withSpinner())
       )
@@ -257,7 +262,7 @@ correlation_mod <- function(input, output, session, project) {
     feature_meta_path %>%
       readr::read_csv() %>%
       feature_meta_tbl()
-
+    
     # init filtering
     cor_results_tbl() %>%
       dplyr::filter(sample_group == sample_groups()[1]) %>%
@@ -272,40 +277,8 @@ correlation_mod <- function(input, output, session, project) {
       cor_ready_obs$suspend()
     }
   )
-
-  shiny::observeEvent(
-    eventExpr = input$sample_group,
-    handlerExpr = {
-      if (!is.null(cor_results_tbl())) {
-        cor_results_tbl() %>%
-          filter_correlation_results(input) %>%
-          filtered_cor_results_tbl()
-      }
-    }
-  )
-
-  shiny::observeEvent(
-    eventExpr = input$exclude_cor,
-    handlerExpr = {
-      if (!is.null(cor_results_tbl())) {
-        cor_results_tbl() %>%
-          filter_correlation_results(input) %>%
-          filtered_cor_results_tbl()
-      }
-    }
-  )
-
-  shiny::observeEvent(
-    eventExpr = input$max_pvalue,
-    handlerExpr = {
-      if (!is.null(cor_results_tbl())) {
-        cor_results_tbl() %>%
-          filter_correlation_results(input) %>%
-          filtered_cor_results_tbl()
-      }
-    }
-  )
-
+  
+  
   output$download_banocc_models <- shiny::downloadHandler(
     filename = "models.rds",
     content = function(filename) {
@@ -322,6 +295,19 @@ correlation_mod <- function(input, output, session, project) {
     }
   )
 
+  shiny::observeEvent(
+    # Update network only on click to prevent stack overflow
+    # Calculating layout e.g. while turning the slider is too slow
+    eventExpr = input$update_network,
+    handlerExpr = {
+      if (!is.null(cor_results_tbl())) {
+        cor_results_tbl() %>%
+          filter_correlation_results(input) %>%
+          filtered_cor_results_tbl()
+      }
+    }
+  )
+  
   output$table <- DT::renderDataTable({
     shiny::need(!is.null(filtered_cor_results_tbl()), "Please wait until correlation analysis is finished") %>% shiny::validate()
     shiny::need(
