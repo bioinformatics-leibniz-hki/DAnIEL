@@ -28,7 +28,7 @@ denoised_fasta_paths <-
   # failed samples may create an empty fasta file. Discard these
   purrr::discard(~ file.size(.) == 0) %>%
   # remove summary if already exsisted
-  purrr::discard(~ .x %>% str_detect("/raw_denoised.fasta"))
+  purrr::discard(~ .x %>% str_detect("//[A-z_]*denoised.fasta"))
 
 sample_asv_seqs <-
   denoised_fasta_paths %>%
