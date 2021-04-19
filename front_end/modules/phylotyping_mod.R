@@ -80,11 +80,12 @@ phylotyping_mod <- function(input, output, session, project) {
         denoised_tbl()
     }
   })
+  
   shiny::observeEvent(
-    eventExpr = phylotyped_tbl,
+    eventExpr = denoised_tbl,
     handlerExpr = {
       # no need to continue looking for qc file
-      phylotyped_tbl_obs$suspend()
+      denoised_tbl_obs$suspend()
     }
   )
 
