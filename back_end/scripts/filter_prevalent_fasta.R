@@ -38,7 +38,7 @@ args <- base::list(
     description = "Filters fasta MSA to prevalent repseqs"
   ) %>%
   optparse::parse_args(convert_hyphens_to_underscores = TRUE)
-  
+
 denoised_tbl <-
   args$in_denoised_csv %>%
   readr::read_csv() %>%
@@ -54,12 +54,14 @@ repseqs <-
   dplyr::pull(denoised)
 
 # Do not need dependencies e.g. BioStrings
-args$in_fasta %>%
+tbl <-
+  args$in_fasta %>%
   read_file() %>%
-  head() %>%
-  read_delim(delim = "\n>", col_names = "fasta") %>%
+  read_delim(delim = "\n>", col_names = "fasta")
+
+tbl %>%
   mutate(
-    type = c("header", "seq") %>% rep(28714/2),
+    type = c("header", "seq") %>% rep(nrow(tbl) / 2),
     seq_id = (row_number() / 2) %>% ceiling()
   ) %>%
   pivot_wider(names_from = type, values_from = fasta) %>%

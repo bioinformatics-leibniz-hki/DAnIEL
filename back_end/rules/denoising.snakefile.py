@@ -55,7 +55,9 @@ rule filter_repseq_alignment:
     Get prevalent representative sequences from MSA for fast displaying
     """
     input:
+        TARGET_DENOISING_METHOD,
         repseq_msa = DENOISING_DIR + "denoised.aligned.fasta",
+    params:
         denoised_csv = DENOISING_DIR  + "denoised.csv"
     output:
         out_fasta = DENOISING_DIR + "denoised.filtered.aligned.fasta"
@@ -65,7 +67,7 @@ rule filter_repseq_alignment:
         """
         filter_prevalent_fasta.R \
                 --n-seqs 50 \
-                --in-denoised-csv {input.denoised_csv} \
+                --in-denoised-csv {params.denoised_csv} \
                 --in-fasta {input.repseq_msa} \
                 --out-fasta {output.out_fasta}
         """
