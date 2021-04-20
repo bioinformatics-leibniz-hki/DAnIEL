@@ -70,16 +70,16 @@ showNotification <- function(...) shiny::showNotification(duration = 10, ...)
 # Default ggplot theme
 #
 na_color <- "#666666"
-scale_fill_discrete <- function(...) ggplot2::scale_fill_viridis_d(na.value = na_color, ...)
+scale_fill_discrete <- function(...) ggplot2::scale_color_hue(na.value = na_color, ...)
 scale_fill_continuous <- function(...) ggplot2::scale_fill_viridis_c(na.value = na_color, ...)
-scale_color_discrete <- function(...) ggplot2::scale_color_viridis_d(na.value = na_color, ...)
+scale_color_discrete <- function(...) ggplot2::scale_color_hue(na.value = na_color, ...)
 scale_color_continuous <- function(...) ggplot2::scale_color_viridis_c(na.value = na_color, ...)
-scale_colour_discrete <- function(...) ggplot2::scale_colour_viridis_d(na.value = na_color, ...)
+scale_colour_discrete <- function(...) ggplot2::scale_color_hue(na.value = na_color, ...)
 scale_colour_continuous <- function(...) ggplot2::scale_colour_viridis_c(na.value = na_color, ...)
 
 bg_color <- "#F9F9F9"
 theme_my <-
-  ggplot2::theme_minimal(base_size = 16) +
+  ggplot2::theme_minimal(base_size = 11) +
   ggplot2::theme(
     axis.line.x = ggplot2::element_line(size = 0.8),
     axis.line.y = ggplot2::element_line(size = 0.8),

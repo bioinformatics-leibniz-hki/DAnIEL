@@ -40,6 +40,7 @@ boxplot_mod_UI <- function(id) {
         )
       )
     ),
+    shiny::p("Significance is calculated using Wilcoxon test for binary outcomes and using Kruskal-Wallis and Dunn's test otherwise."),
     plot_mod_UI(ns("plot_mod"))
   )
 }
@@ -64,11 +65,16 @@ plot_boxplot <- function(tbl, grouping, sample_id) {
     ggiraph::geom_point_interactive(aes_string(tooltip = sample_id)) +
     ggplot2::geom_boxplot() +
     ggplot2::facet_wrap(~key, ncol = 2, strip.position = "left", scales = "free") +
-    ggplot2::theme(axis.text.x = ggplot2::element_blank()) +
-    ggplot2::theme(strip.placement = "outside") +
-    ggplot2::labs(x = grouping, y = "")
-
-  res_plt <- purrr::when(
+    ggplot2::coord_cartesian(clip = "off") +
+    ggplot2::theme(
+      axis.text.x = ggplot2::element_blank(),
+      strip.placement = "outside",
+      legend.position = "bottom"
+    ) +
+    ggplot2::guides(color = guide_legend(ncol = 1)) +
+    ggplot2::labs(x = "", y = "")
+  
+  res_plt <- dplyr::case_when(
     length(groups) == 2 ~ "binary",
     length(groups) > 2 ~ "multi",
     TRUE ~ "simple"
@@ -157,7 +163,7 @@ boxplot_mod <- function(input, output, session, features_tbl, samples_tbl, sampl
 
   boxplot <- shiny::reactive({
     shiny::need(
-      expr = !is.null(tbl()),
+      expr = tbl() %>% nrow() > 0,
       message = "No data available"
     ) %>% shiny::validate()
 

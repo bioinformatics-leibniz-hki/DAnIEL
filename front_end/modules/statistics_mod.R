@@ -76,6 +76,8 @@ statistics_mod <- function(input, output, session, project) {
   })
 
   features_tbl <- shiny::reactive({
+    message("Statistics module: Read features_tbl")
+    
     file_path <-
       project$selected_params$features %>%
       stringr::str_replace_all(" ", "_") %>%

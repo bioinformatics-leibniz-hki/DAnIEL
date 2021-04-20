@@ -101,7 +101,7 @@ draw_correlation_network <- function(cor_results_tbl, feature_meta_tbl, color_ra
   visNetwork(nodes_tbl, edges_tbl) %>%
     visNodes(font = list(multi = "html")) %>%
     visOptions(highlightNearest = TRUE) %>%
-    visLayout(randomSeed = 1337)
+    visIgraphLayout(layout = "layout_nicely")
   # visLegend(
   #   useGroups = FALSE,
   #   addNodes = data.frame(
@@ -160,10 +160,8 @@ correlation_mod_UI <- function(id) {
         )
       ),
       shiny::tabsetPanel(
-        type = "tabs",
-        height = "800px",
-        shiny::tabPanel("Network", visNetwork::visNetworkOutput(outputId = ns("network")) %>% withSpinner()),
-        shiny::tabPanel("Table", DT::dataTableOutput(outputId = ns("table"), width = "100%") %>% withSpinner())
+        shiny::tabPanel("Network", visNetwork::visNetworkOutput(outputId = ns("network"), height = "1000px") %>% withSpinner()),
+        shiny::tabPanel("Table", DT::dataTableOutput(outputId = ns("table"), width = "100%", height = "1000px") %>% withSpinner())
       )
     ),
     shiny::div(

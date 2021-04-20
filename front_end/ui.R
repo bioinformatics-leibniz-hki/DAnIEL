@@ -62,7 +62,7 @@ dashboardSidebar <- shinydashboard::dashboardSidebar(
     shinydashboard::menuItem(text = "Input", tabName = "input", icon = icon("file")),
     shinydashboard::menuItem(text = "Start", tabName = "start", icon = icon("play")),
     shiny::h4("Results", class = "sidebar_header"),
-    shinydashboard::sidebarMenuOutput("pipeline_menue")
+    shinydashboard::sidebarMenuOutput("pipeline_menue") %>% withSpinner()
   )
 )
 

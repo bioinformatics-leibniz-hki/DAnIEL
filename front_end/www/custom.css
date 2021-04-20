@@ -1,4 +1,5 @@
-body {
+html, body {
+	min-height: 100%;
 	max-width: 1500px;
 	margin: auto;
 	background-color: #bbb;

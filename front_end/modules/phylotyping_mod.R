@@ -90,27 +90,9 @@ phylotyping_mod <- function(input, output, session, project) {
   )
 
   output$phylotyped_tbl <- DT::renderDataTable({
-    shiny::need(!is.null(denoised_tbl()), "Please wait until phylotyping is finished") %>% shiny::validate()
+    shiny::need(!is.null(phylotyped_tbl()), "Please wait until phylotyping is finished") %>% shiny::validate()
 
-    abundance_spk_tbl <-
-      denoised_tbl() %>%
-      tidyr::gather(sequence, abundance, -sample_id) %>%
-      # normalize by per sample percentage
-      dplyr::group_by(sample_id) %>%
-      dplyr::mutate(abundance = abundance / sum(abundance) * 100) %>%
-      # create boxplot for each denoised sequence
-      dplyr::group_by(sequence) %>%
-      dplyr::summarise(
-        abundance = sparkline::spk_chr(
-          values = abundance,
-          type = "box",
-          chartRangeMin = 0,
-          chartRangeMax = base::max(.$abundance)
-        )
-      )
-
-    abundance_spk_tbl %>%
-      dplyr::left_join(phylotyped_tbl()) %>%
+   phylotyped_tbl() %>%
       dplyr::select(-kingdom) %>%
       dplyr::arrange(phylum, class, order, family, genus, species, strain) %>%
       # italic species names

@@ -24,7 +24,8 @@ denoising_mod_UI <- function(id) {
       id = ns("interactive"),
       shiny::h2("Interactive analysis"),
       shiny::h3("Alignment of denoised sequences"),
-      msaR::msaROutput(outputId = ns("msa_denoised"), width = "100%", height = "800px"),
+      shiny::p("For the sake of clarity, only the most prevalent sequences were shown. The tree, however, was calculated based on all representative sequences"),
+      msaR::msaROutput(outputId = ns("msa_denoised"), width = "100%", height = "800px") %>% withSpinner(),
       shiny::h3("Alpha diversity"),
       shiny::div("Representative sequences (ASV or OTUs) of denoised reads are used to calculate diversity for each sample."),
       boxplot_mod_UI(ns("boxplot_mod")),
@@ -96,8 +97,9 @@ denoising_mod <- function(input, output, session, project) {
   alphadiv_tbl <- shiny::reactive({
     shiny::req(denoised_tbl() %>% nrow() > 0)
     shinyjs::show("interactive")
-
-    danielLib::get_alpha_diversity_all(denoised_tbl())
+    
+    denoised_tbl() %>%
+      danielLib::get_alpha_diversity_all()
   })
 
   boxplot_denoising_mod <- shiny::callModule(
@@ -114,14 +116,14 @@ denoising_mod <- function(input, output, session, project) {
   }
 
   output$msa_denoised <- msaR::renderMsaR({
-    denoised_fasta_msa_path <-
-      paste0(denoising_dir, "/denoised.aligned.fasta")
-
-    shiny::need(file.exists(denoised_fasta_msa_path), message = "Alignment file not found") %>%
+    denoised_filtered_fasta_msa_path <-
+      paste0(denoising_dir, "/denoised.filtered.aligned.fasta")
+    
+    shiny::need(file.exists(denoised_filtered_fasta_msa_path), message = "Alignment file not found") %>%
       shiny::validate()
 
     msaR::msaR(
-      msa = denoised_fasta_msa_path,
+      msa = denoised_filtered_fasta_msa_path,
       menu = TRUE,
       overviewbox = TRUE,
       overviewboxHeight = 80,

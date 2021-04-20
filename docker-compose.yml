@@ -26,6 +26,7 @@ services:
         volumes:
             - ${DANIEL_USERDAT_DIR}:/userdat
             - ${DANIEL_DB_DIR}:/db:ro
+            - ${DANIEL_DIR}/repo:/app
         environment:
             - DANIEL_SCRIPT_DIR=/app/back_end/scripts
             - DANIEL_DB_DIR=/db
@@ -51,6 +52,7 @@ services:
             - "3838:3838"
             - "8888:8888"
         volumes:
+            - ${DANIEL_DIR}/repo/front_end:/srv/shiny-server/latest
             - ${DANIEL_USERDAT_DIR}:/userdat
             - ${DANIEL_DB_DIR}:/db:ro
         environment:

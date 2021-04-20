@@ -13,6 +13,12 @@
 # knit Rmd
 #find front_end/ | grep Rmd$ | xargs -i -P $(nproc) R -e "rmarkdown::render('{}')"
 
+export DANIEL_DIR=$PWD/..
+export DANIEL_REPO_DIR=$DANIEL_DIR/repo
+export DANIEL_USERDAT_DIR=$DANIEL_DIR/userdat
+#export DANIEL_DB_DIR=$DANIEL_DIR/db
+export DANIEL_DB_DIR=/sbidata/server/daniel/latest/db
+
 # build images
 export COMPOSE_DOCKER_CLI_BUILD=1 
 export DOCKER_BUILDKIT=1
