@@ -86,7 +86,7 @@ rule before_multiqc:
         log:
                 QC_DIR + "before/multiqc.log"
         wrapper:
-                "0.38.0/bio/multiqc"
+                "0.73.0/bio/multiqc"
 
 rule after_multiqc:
         input:
@@ -98,7 +98,7 @@ rule after_multiqc:
         log:
                 QC_DIR + "after/multiqc.log"
         wrapper:
-                "0.38.0/bio/multiqc"
+                "0.73.0/bio/multiqc"
 
 rule cutadapt:
         input:
