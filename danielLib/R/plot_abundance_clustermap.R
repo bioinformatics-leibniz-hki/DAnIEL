@@ -13,7 +13,8 @@
 #' @param normalization_method string of normalization method used as legend title
 #' @param taxonomic_rank string used as y axis title. Taxa are printed in italic if this is genus or species
 #' @param clustering_distance clustering distance passed to ComplexHeatmap::Heatmap
-plot_abundance_clustermap <- function(features_tbl, normalization_method, taxonomic_rank, clustering_distance = "spearman") {
+plot_abundance_clustermap <- function(features_tbl, normalization_method, taxonomic_rank,
+                                      clustering_distance = "spearman", n_max_print_samples = 20, n_max_print_taxa = 20) {
   cluster_features <- features_tbl %>% ncol() > 2 # substract sample name column
   cluster_samples <- features_tbl %>% nrow() > 1
 
@@ -30,10 +31,20 @@ plot_abundance_clustermap <- function(features_tbl, normalization_method, taxono
     fontface <- base::ifelse(taxonomic_rank %in% c("species", "genus"), "italic", "plain")
 
     features_tbl %>%
-      magrittr::set_rownames(.$sample_id) %>%
-      dplyr::select(-sample_id) %>%
-      base::as.matrix() %>%
+      tibble::column_to_rownames("sample_id") %>%
+      as.matrix() %>%
       base::t() %>%
+      {
+        # hide axis tick labels if there are too many
+        .x <- .
+        if (nrow(.x) > n_max_print_taxa) {
+          rownames(.x) <- NULL
+        }
+        if (ncol(.x) > n_max_print_samples) {
+          colnames(.x) <- NULL
+        }
+        .x
+      } %>%
       ComplexHeatmap::Heatmap(
         # general
         name = normalization_method,
@@ -48,8 +59,7 @@ plot_abundance_clustermap <- function(features_tbl, normalization_method, taxono
         # samples (columns)
         column_title = "sample",
         column_names_max_height = grid::unit(Inf, "cm"),
-        column_names_centered = TRUE,
-        ...
+        column_names_centered = TRUE
       )
   }
 
