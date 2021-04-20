@@ -40,6 +40,16 @@ plot_beta_diversity <- function(features_phy, ord_method = "PCoA", ord_distance 
     as_tibble() %>%
     magrittr::set_colnames(colnames(.) %>% .[3:length(.)] %>% c("axis1", "axis2", .)) %>%
     ggplot2::ggplot(mapping = aes(axis1, axis2)) +
+
+    # draw sample points
+    ggiraph::geom_point_interactive(
+      data = . %>% dplyr::filter(id.type == "Samples"),
+      mapping = aes_string(tooltip = "sample_id", color = samples_grouping),
+      size = 3
+    ) +
+    ggplot2::scale_color_hue() +
+    ggnewscale::new_scale_color() +
+
     # draw taxa arrows
     ggiraph::geom_segment_interactive(
       data = . %>% dplyr::filter(id.type == "Taxa"),
@@ -47,14 +57,7 @@ plot_beta_diversity <- function(features_phy, ord_method = "PCoA", ord_distance 
       arrow = arrow(ends = "first"),
       linejoin = "round"
     ) +
-    # draw sample points
-    ggnewscale::new_scale_color() +
-    ggnewscale::new_scale_fill() +
-    ggiraph::geom_point_interactive(
-      data = . %>% dplyr::filter(id.type == "Samples"),
-      mapping = aes_string(tooltip = "sample_id", color = samples_grouping),
-      size = 3
-    ) +
+    ggplot2::scale_color_viridis_d() +
     ggplot2::labs(
       x = axes_labels[1],
       y = axes_labels[2]
