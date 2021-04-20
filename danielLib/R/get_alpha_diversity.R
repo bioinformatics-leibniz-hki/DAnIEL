@@ -12,21 +12,12 @@
 #' @param tbl abundance tibble with column sample_id. Denoised raw counts preferred.
 #' @return alpha diversity tibble with columns sample_id, shannon, simpson, invsimpson
 get_alpha_diversity_all <- function(tbl, measures = c("Chao1", "Shannon", "InvSimpson"), ...) {
-  res <-
-    tbl %>%
-    set_rownames(.$sample_id) %>%
-    select(-sample_id) %>%
+  tbl %>%
+    magrittr::set_rownames(.$sample_id) %>%
+    dplyr::select(-sample_id) %>%
     phyloseq::otu_table(taxa_are_rows = FALSE) %>%
     phyloseq::estimate_richness(measures = measures) %>%
-    as_tibble(rownames = "sample_id") %>%
-    select(-se.chao1)
-
-  # phyloseq::estimate_richness reformats sample_id
-  # e.g. with prefix X if sample_id is numeric
-  # Undo this behavior
-  if (tbl$sample_id %>% str_detect("^[0-9]") %>% all()) {
-    res <- res %>% mutate_at("sample_id", ~ stringr::str_remove(.x, "^X"))
-  }
-
-  res
+    tibble::as_tibble(rownames = "sample_id") %>%
+    dplyr::select(-se.chao1) %>%
+    dplyr::mutate(sample_id = tbl$sample_id)
 }
