@@ -50,6 +50,26 @@ rule repseq_tree:
                     touch {output.repseq_tree} {output.repseq_msa}
                 """
 
+rule filter_repseq_alignment:
+    """
+    Get prevalent representative sequences from MSA for fast displaying
+    """
+    input:
+        repseq_msa = DENOISING_DIR + "denoised.aligned.fasta",
+        denoised_csv = DENOISING_DIR  + "denoised.csv"
+    output:
+        out_fasta = DENOISING_DIR + "denoised.filtered.aligned.fasta"
+    conda:
+        "../envs/denoising.conda_env.yml"
+    shell:
+        """
+        filter_prevalent_fasta.R \
+                --n-seqs 50 \
+                --in-denoised-csv {input.denoised_csv} \
+                --in-fasta {input.repseq_msa} \
+                --out-fasta {output.out_fasta}
+        """
+
 
 rule dada2_sample:
         """

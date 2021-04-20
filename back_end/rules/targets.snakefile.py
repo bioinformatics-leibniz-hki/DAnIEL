@@ -44,7 +44,8 @@ denoising_methods_d = {
 }
 TARGET_DENOISING_METHOD = [denoising_methods_d[DENOISING_PARAMS["denoising_method"]]]
 TARGET_REPSEQ = [DENOISING_DIR + "denoised.nwk"] + [DENOISING_DIR + "denoised.aligned.fasta"]
-TARGET_DENOISING = TARGET_DENOISING_METHOD + TARGET_REPSEQ
+TARGET_FILTER_REPSEQ = [DENOISING_DIR + "denoised.filtered.aligned.fasta"]
+TARGET_DENOISING = TARGET_DENOISING_METHOD + TARGET_REPSEQ + TARGET_FILTER_REPSEQ
 
 # Phylotyping
 phylotyping_methods_d = {

@@ -8,7 +8,7 @@ output:
     df_print: paged
 params:
   reports_dir: /sbidata/server/daniel/latest/repo/back_end/reports/
-  project_dir: /sbidata/server/daniel/latest/userdat/test_wrong_its_pipits/
+  project_dir: ~/prj/7-daniel/userdat/example_soil_pipits
   db_dir: /sbidata/server/daniel/latest/db
 ---
 
@@ -20,7 +20,7 @@ library(ggtree)
 library(ape)
 library(dada2)
 
-num_repseqs_showed <- 30
+num_repseqs_showed <- 50
 
 project <-
   paste0(params$project_dir, "/input/project.json") %>%
@@ -51,6 +51,15 @@ denoised_tbl <-
   paste0(denoising_dir, "denoised.csv") %>%
   readr::read_csv() %>%
   possibly(tidyr::gather, NULL)(denoised, abundance, -sample_id)
+
+repseqs <-
+  denoised_tbl %>%
+  dplyr::group_by(denoised) %>%
+  dplyr::filter(abundance > 0) %>%
+  dplyr::count() %>%
+  dplyr::arrange(-n) %>%
+  head(num_repseqs_showed) %>%
+  dplyr::pull(denoised)
 ```
 
 # Denoising
@@ -75,7 +84,7 @@ This is done by removing potential sequencing errors.
 - Multiple sequence alignment was performed on representative sequences only to visualize differences between the sequences
 - QIIME2 alignment tool using MAFFT method was used to align all representative sequences [@pmid31341288; @pmid23329690]
 - QIIME2 phylogeny tool using FastTree method was used to create a rooted tree out of this alignment [@pmid20224823]
-- For the sake of clarity, only the `r {num_repseqs_showed}` most prevalent sequences were shown. The tree, however, was calculated based on all representative sequences
+- For the sake of clarity, only the `r {num_repseqs_showed}` most prevalent sequences were shown: `r {repseqs %>% paste0(collapse = ", ")}` The tree, however, was calculated based on all representative sequences
 
 ## Results
 ```{rmd, eval = !available}
@@ -365,15 +374,6 @@ plot_girafe(read_count_plt)
 ```
 
 ```{r, fig.cap="Multiple sequence alignment of most prevalent representative sequences"}
-repseqs <-
-  denoised_tbl %>%
-  dplyr::group_by(denoised) %>%
-  dplyr::filter(abundance > 0) %>%
-  dplyr::count() %>%
-  dplyr::arrange(-n) %>%
-  head(num_repseqs_showed) %>%
-  dplyr::pull(denoised)
-
 tree_plt <-
   tree %>%
   ape::keep.tip(repseqs) %>%
