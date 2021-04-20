@@ -161,6 +161,13 @@ withSpinner <- function(x) shinycssloaders::withSpinner(ui_element = x, color = 
 resume_project_modal_UI <- shiny::modalDialog(
   title = "Resume project",
   easyClose = TRUE,
+  # load project on enter
+  tags$script(HTML(
+    "$(document).keyup(function(event) {
+    if ($('#resume_project_id').is(':focus') && (event.keyCode == 13)) {
+      $('#resume_project_ok').click();
+  }})"
+  )),
   shiny::div("Please enter the id of the project to be resumed."),
   shiny::textInput("resume_project_id", label = "Project ID", placeholder = "00000000-aaaa-0000-aaaa-000000000000"),
   shiny::actionButton("resume_project_ok", label = "Load")
