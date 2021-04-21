@@ -72,7 +72,8 @@ asv_seqs %>%
   Biostrings::writeXStringSet(base::paste0(dir, "/raw_denoised.fasta"))
 
 # denoised abundance profile
-asv_profile_tbl <- asv_tbl %>%
+asv_profile_tbl <-
+  asv_tbl %>%
   dplyr::group_by(asv, sample_id) %>%
   dplyr::summarise(abundance = sum(abundance)) %>%
   dplyr::ungroup() %>%
@@ -80,6 +81,33 @@ asv_profile_tbl <- asv_tbl %>%
   dplyr::arrange(asv) %>%
   tidyr::spread(asv, abundance, fill = 0) %T>%
   readr::write_csv(paste0(dir, "/raw_denoised.csv"))
+
+#' @param x list with elements fwd_dada, rev_dada and file
+get_error_tbl <- function(x, mate = "fwd") {
+  switch(
+    mate,
+    "fwd" = {
+      x$fwd_dada$err_out
+    },
+    "rev" = {
+      x$rev_dada$err_out
+    }
+  ) %>%
+    tibble::as_tibble(rownames = "transition") %>%
+    tidyr::gather(consensus_qual_score, err_freq, -transition) %>%
+    dplyr::mutate(
+      sample_id = {
+        x$file %>%
+          stringr::str_split("/") %>%
+          purrr::pluck(1) %>%
+          utils::tail(2) %>%
+          utils::head(1)
+      },
+      mate = mate,
+      transition = transition %>% stringr::str_replace("2", ">") %>% base::as.factor(),
+      consensus_qual_score = base::as.integer(consensus_qual_score),
+    )
+}
 
 # summary of error models
 dada2_res_l <-
@@ -92,41 +120,13 @@ dada2_res_l <-
     res
   })
 
-get_error_tbl <- function(x, mate = "fwd") {
-  switch(
-    mate,
-    "fwd" = {
-      dada2_res_l[[x]]$fwd_dada$err_out
-    },
-    "rev" = {
-      dada2_res_l[[x]]$rev_dada$err_out
-    }
-  ) %>%
-    tibble::as_tibble(rownames = "transition") %>%
-    tidyr::gather(consensus_qual_score, err_freq, -transition) %>%
-    dplyr::mutate(
-      sample_id = {
-        dada2_res_l[[x]]$file %>%
-          stringr::str_split("/") %>%
-          purrr::pluck(1) %>%
-          utils::tail(2) %>%
-          utils::head(1)
-      },
-      mate = mate,
-      transition = transition %>% stringr::str_replace("2", ">") %>% base::as.factor(),
-      consensus_qual_score = base::as.integer(consensus_qual_score),
-    )
-}
-
 dada2_err_tbl <-
-  base::length(dada2_res_l) %>%
-  base::seq() %>%
-  base::lapply(function(x) {
-    dplyr::bind_rows(
-      get_error_tbl(x, "fwd"),
-      get_error_tbl(x, "rev")
-    )
-  }) %>%
+  dada2_res_l %>%
+  tibble::enframe() %>%
+  tidyr::expand_grid(mate = c("fwd", "rev")) %>%
+  dplyr::mutate(error_tbl = value %>% map2(mate, purrr::possibly(get_error_tbl, NA))) %>%
+  dplyr::filter(! error_tbl %>% is.na()) %>%
+  dplyr::pull(error_tbl) %>%
   dplyr::bind_rows()
 
 c("asv_profile_tbl", "dada2_res_l", "dada2_err_tbl") %>%
