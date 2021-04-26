@@ -78,8 +78,7 @@ used_taxonomic_ranks <- taxonomic_ranks[taxonomic_ranks >= taxonomic_ranks[args$
 
 features_otu_phy <-
   read_csv(args$features_csv) %>%
-  set_rownames(.$sample_id) %>%
-  select(-sample_id) %>%
+  column_to_rownames("sample_id") %>%
   phyloseq::otu_table(taxa_are_rows = FALSE)
 
 # CSV table with rows species, genus, ...
