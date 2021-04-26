@@ -130,16 +130,26 @@ ml_mod <- function(input, output, session, project) {
     selected_model()$fs_obj %>%
       danielLib::plot_roc(folds = TRUE)
   })
+  
+  roc_error <- shiny::reactive(
+    if(selected_model()$type == "binary classification") {
+      NULL
+    } else {
+      "ROC plots only apply to binary comparisons"
+    }
+  )
 
   pooled_plot_mod <- shiny::callModule(
     module = plot_mod,
     id = "pooled_plot_mod",
-    plt = roc_pooled_plot
+    plt = roc_pooled_plot,
+    error = roc_error()
   )
 
   folds_plot_mod <- shiny::callModule(
     module = plot_mod,
     id = "folds_plot_mod",
-    plt = roc_folds_plot
+    plt = roc_folds_plot,
+    error = roc_error()
   )
 }

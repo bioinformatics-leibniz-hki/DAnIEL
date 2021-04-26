@@ -65,7 +65,8 @@ plot_mod_UI <- function(id) {
 }
 
 #' @param plt Shiny reactive ggplot object
-plot_mod <- function(input, output, session, plt) {
+#' @param error character of error message to be displayed instead of plt and NULL otherwise.
+plot_mod <- function(input, output, session, plt, error = NULL) {
   filename <- shiny::reactive(paste0("image.", input$file_type))
 
   shiny::observeEvent(
@@ -76,6 +77,8 @@ plot_mod <- function(input, output, session, plt) {
   )
 
   output$plot <- ggiraph::renderGirafe({
+    shiny::need(is.null(error), error) %>% shiny::validate()
+    
     plt() %>%
       ggiraph::girafe(ggobj = ., options = list(ggiraph::opts_toolbar(saveaspng = FALSE)))
   })
