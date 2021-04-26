@@ -71,8 +71,7 @@ significant_tests_count_str <- function(stat_tbl) {
 
 stat_tbl <-
   paste0(statistics_dir, "stat.csv") %>%
-  readr::read_csv() %>%
-  dplyr::arrange(-abs(effsize_value))
+  readr::read_csv() 
 
 stat_bivariate_tbl <-
   stat_tbl %>%
