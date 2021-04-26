@@ -118,7 +118,9 @@ ml_mod <- function(input, output, session, project) {
       ) %>%
       dplyr::as_tibble() %>%
       dplyr::rename(Classifier = clf_method, `Feature Selection` = fs_method) %>%
-      kable()
+      dplyr::mutate_at(c("AUC", "Sens", "Spec", "AUCSD", "SensSD", "SpecSD"), ~ round(.x, digits = 2)) %>%
+      kable() %>%
+      kableExtra::kable_styling(full_width = TRUE)
   })
 
   roc_pooled_plot <- shiny::reactive({
