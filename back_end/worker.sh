@@ -74,6 +74,7 @@ while true; do
 				--nolock \
 				--printshellcmds \
 				--latency-wait 30 \
+				--restart-times 3 \
 				--use-conda \
 				--conda-prefix $conda_prefix \
 				--snakefile $snakefile \
