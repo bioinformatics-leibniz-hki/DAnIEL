@@ -20,34 +20,42 @@ features_mod_UI <- function(id) {
   shiny::fluidPage(
     width = NULL,
     shiny::uiOutput(ns("static_report")),
-    shiny::h2("Interactive alpha diversity"),
-    shiny::div("Feature counts pooled at provided taxonomic rank are used to calculate diversity for each sample."),
-    boxplot_mod_UI(ns("boxplot_mod")),
-    shiny::h2("Interactive beta diversity"),
     shiny::div(
-      paste(
-        "Feature counts pooled at provided taxonomic rank are used to calculate dissimilarity for each pair of samples.",
-        "This dissimilarity is approximately plotted in the two dimensional plane."
+      id = ns("interactive"),
+      
+      shiny::h2("Interactive abundance"),
+      abundance_mod_UI(ns("abundance_mod")),
+      shiny::h2("Interactive alpha diversity"),
+      shiny::div("Feature counts pooled at provided taxonomic rank are used to calculate diversity for each sample."),
+      boxplot_mod_UI(ns("boxplot_mod")),
+      shiny::h2("Interactive beta diversity"),
+      shiny::div(
+        paste(
+          "Feature counts pooled at provided taxonomic rank are used to calculate dissimilarity for each pair of samples.",
+          "This dissimilarity is approximately plotted in the two dimensional plane."
+        )
+      ),
+      ordination_mod_UI(ns("ordination_mod")),
+      shiny::h2("Download"),
+      shiny::downloadButton(
+        outputId = ns("download_features_raw"),
+        label = "Raw feature profile (XLSX)"
+      ),
+      shiny::downloadButton(
+        outputId = ns("download_features_norm"),
+        label = "Normalized feature profile (XLSX)"
+      ),
+      shiny::downloadButton(
+        outputId = ns("download_features_meta"),
+        label = "Feature meta data (XLSX)"
       )
-    ),
-    ordination_mod_UI(ns("ordination_mod")),
-    shiny::h2("Download"),
-    shiny::downloadButton(
-      outputId = ns("download_features_raw"),
-      label = "Raw feature profile (XLSX)"
-    ),
-    shiny::downloadButton(
-      outputId = ns("download_features_norm"),
-      label = "Normalized feature profile (XLSX)"
-    ),
-    shiny::downloadButton(
-      outputId = ns("download_features_meta"),
-      label = "Feature meta data (XLSX)"
     )
   )
 }
 
 features_mod <- function(input, output, session, project) {
+  shinyjs::hide(id = "interactive")
+  
   features_params <- project$params$features_params[[project$selected_params$features]]
   features_dir <- paste0(project$project_dir, "/features/", stringr::str_replace_all(project$selected_params$features, " ", "_"), "/")
 
@@ -63,7 +71,8 @@ features_mod <- function(input, output, session, project) {
     file_path %>%
       file.exists() %>%
       shiny::req()
-
+    
+    shinyjs::show(id = "interactive")
     readr::read_csv(file_path)
   })
 
@@ -143,6 +152,15 @@ features_mod <- function(input, output, session, project) {
     module = ordination_mod,
     id = "ordination_mod",
     features_phy = features_phy
+  )
+  
+  abundance_mod <- shiny::callModule(
+    module = abundance_mod,
+    id = "abundance_mod",
+    norm_features_tbl = norm_features_tbl,
+    raw_features_tbl = raw_features_tbl,
+    samples_tbl = samples_tbl,
+    features_params = features_params
   )
 
   output$download_features_raw <- shiny::downloadHandler(
