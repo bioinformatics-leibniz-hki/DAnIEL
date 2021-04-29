@@ -53,9 +53,20 @@ download_image_modal <- function(ns) {
 plot_mod_UI <- function(id) {
   ns <- shiny::NS(id)
   shiny::fluidPage(
-    ggiraph::girafeOutput(
-      outputId = ns("plot"),
-    ) %>% withSpinner(),
+    shiny::div(
+      id = ns("div_plot_ggplot"),
+      ggiraph::girafeOutput(
+        outputId = ns("plot_ggplot"),
+      ) %>% withSpinner()
+    ),
+
+    shiny::div(
+      id = ns("div_plot"),
+      shiny::plotOutput(
+        outputId = ns("plot"),
+      ) %>% withSpinner()
+    ),
+
     shiny::actionButton(
       inputId = ns("show_download_modal"),
       label = "Download plot",
@@ -64,10 +75,19 @@ plot_mod_UI <- function(id) {
   )
 }
 
-#' @param plt Shiny reactive ggplot object
+#' @param plt Shiny reactive plot object
+#' @param ggplot TRUE if interactive ggplot ggplot object should be displayed or FALSE for general plots
 #' @param error character of error message to be displayed instead of plt and NULL otherwise.
-plot_mod <- function(input, output, session, plt, error = NULL) {
+plot_mod <- function(input, output, session, plt, ggplot = TRUE, error = NULL) {
   filename <- shiny::reactive(paste0("image.", input$file_type))
+
+  if (ggplot) {
+    shinyjs::show("div_plot_ggplot")
+    shinyjs::hide("div_plot")
+  } else {
+    shinyjs::show("div_plot")
+    shinyjs::hide("div_plot_ggplot")
+  }
 
   shiny::observeEvent(
     eventExpr = input$show_download_modal,
@@ -76,25 +96,57 @@ plot_mod <- function(input, output, session, plt, error = NULL) {
     }
   )
 
-  output$plot <- ggiraph::renderGirafe({
-    shiny::need(is.null(error), error) %>% shiny::validate()
-    
-    plt() %>%
-      ggiraph::girafe(ggobj = ., options = list(ggiraph::opts_toolbar(saveaspng = FALSE)))
+  output$plot_ggplot <- ggiraph::renderGirafe({
+    if (ggplot) {
+      shiny::need(is.null(error), error) %>% shiny::validate()
+      shiny::need("ggplot" %in% class(plt()), "Object must be of class ggplot") %>% shiny::validate()
+
+      plt() %>%
+        ggiraph::girafe(ggobj = ., options = list(ggiraph::opts_toolbar(saveaspng = FALSE)))
+    } else {
+      # Dummy plot
+      ggplot2::ggplot()
+    }
+  })
+
+  output$plot <- shiny::renderPlot({
+    if (!ggplot) {
+      plt()
+    } else {
+      # Dummy plot
+      ggplot2::ggplot()
+    }
   })
 
   output$download_image <- shiny::downloadHandler(
     filename = filename,
     content = function(filename) {
-      ggsave <- function(...) {
-        ggplot2::ggsave(filename = filename, plot = plt(), width = input$width, height = input$height, dpi = input$dpi, units = "cm", ...)
+      format <- filename %>% stringr::str_extract("[A-z]+$")
+      width <- input$width
+      height <- input$height
+      dpi <- input$dpi
+
+      dev_func <- switch(format,
+        "png" = grDevices::png,
+        "jpg" = grDevices::jpeg,
+        "tiff" = grDevices::tiff,
+        "pdf" = grDevices::cairo_pdf,
+        "svg" = grDevices::svg
+      )
+      
+      # cairo devices use inches
+      if(format %in% c("svg", "pdf")) {
+        width <- width / 2.54
+        height <- height / 2.54
       }
 
-      if (filename %>% endsWith("pdf")) {
-        ggsave(device = cairo_ps)
-      } else {
-        ggsave()
+      if (format %in% c("png", "jpg", "tiff")) {
+        dev_func <- purrr::partial(dev_func, res = dpi, units = "cm")
       }
+
+      dev_func(filename = filename, width = width, height = height)
+      print(plt())
+      dev.off()
     }
   )
 }
