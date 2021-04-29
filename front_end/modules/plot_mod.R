@@ -50,20 +50,27 @@ download_image_modal <- function(ns) {
   )
 }
 
-plot_mod_UI <- function(id) {
+plot_mod_UI <- function(id, width = "100%", height = "500px", ...) {
   ns <- shiny::NS(id)
+  
   shiny::fluidPage(
     shiny::div(
       id = ns("div_plot_ggplot"),
       ggiraph::girafeOutput(
         outputId = ns("plot_ggplot"),
+        width = width,
+        height = height,
+        ...
       ) %>% withSpinner()
     ),
-
+    
     shiny::div(
       id = ns("div_plot"),
       shiny::plotOutput(
         outputId = ns("plot"),
+        width = width,
+        height = height,
+        ...
       ) %>% withSpinner()
     ),
 
