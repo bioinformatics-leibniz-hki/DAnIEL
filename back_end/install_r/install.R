@@ -12,7 +12,7 @@
 
 options(
   Ncpus = parallel::detectCores(),
-  repos = c("https://packagemanager.rstudio.com/all/238"),
+  repos = c("https://packagemanager.rstudio.com/all/__linux__/bionic/238"),
   pkgType = "source"
 )
 
@@ -22,9 +22,6 @@ library(devtools)
 
 cran_pkgs <- readLines("back_end/install_r/cran.txt")
 bioconductor_pkgs <- readLines("back_end/install_r/bioconductor.txt")
-
-# Fix bioconductor release
-bioconductor_pkgs <- as.character(sapply(bioconductor_pkgs, function(x) paste0("3.10/", x)))
 
 devtools::install_cran(cran_pkgs, upgrade = "always")
 devtools::install_bioc(bioconductor_pkgs, upgrade = "always")
