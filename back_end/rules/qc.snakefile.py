@@ -153,9 +153,9 @@ checkpoint final_qc:
                 """
                 source deactivate
 
-                if ["{params.qc_exclusion_criteria}" != "OrderedDict()"]; then
-                    exclusion_arg="--qc-exclusion-criteria {params.qc_exclusion_criteria}"
-                fi
+                [ "{params.qc_exclusion_criteria}" != "OrderedDict()" ] \
+                        &&  exclusion_arg="--qc-exclusion-criteria {params.qc_exclusion_criteria}" \
+                        || :
 
                 qc_tests.R \
                         --qc-dir {params.qc_dir} \
