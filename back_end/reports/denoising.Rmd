@@ -8,8 +8,8 @@ output:
     df_print: paged
 params:
   reports_dir: /sbidata/server/daniel/latest/repo/back_end/reports/
-  project_dir: ~/prj/7-daniel/userdat/example_soil_pipits
-  db_dir: /sbidata/server/daniel/latest/db
+  project_dir: /home/daniel/prj/7-daniel/userdat/test_human
+  db_dir: /home/daniel/prj/7-daniel/db
 ---
 
 ```{r, include = FALSE}
@@ -28,7 +28,9 @@ project <-
 
 selected_params <- danielLib::get_selected_params(project)
 denoising_params <- project$params$denoising_params[[selected_params$denoising]]
+qc_params <- project$params$qc_params[[selected_params$qc]]
 denoising_dir <- paste0(params$project_dir, "/denoising/", stringr::str_replace_all(selected_params$denoising, " ", "_"), "/")
+qc_dir <- paste0(params$project_dir, "/qc/", stringr::str_replace_all(selected_params$qc, " ", "_"), "/")
 
 problematic_asvs_path <-
   denoising_dir %>%
@@ -112,6 +114,22 @@ pipits_funits_log %>% readr::read_file() %>% cat()
 - No ASV left after filtering. Was the right ITS region selected?
 ```
 
+```{r eval = available}
+qc_samples <-
+  qc_dir %>%
+  paste0("/final/final_samples.txt") %>%
+  read_lines()
+
+passed_qc_failed_denoising_samples <-
+  qc_samples %>% setdiff(
+  denoised_tbl$sample_id %>% unique()
+)
+```
+
+```{rmd, eval = available}
+- Samples passed qc but failed denoising: `r {passed_qc_failed_denoising_samples %>% paste0(collapse = ", ")}`
+```
+
 ```{r, eval = !available && denoising_params$denoising_method == "asv_dada2"}
 "denoising/selected_denoising/" %>%
   list.files(pattern = "log.txt$", recursive = TRUE, full.names = TRUE) %>%
@@ -135,7 +153,7 @@ pipits_funits_log %>% readr::read_file() %>% cat()
     paste0(header, content, "\n")
   }) %>%
   purrr::simplify() %>%
-  reduce(paste0) %>%
+  purrr::reduce(paste0) %>%
   pander::pander()
 ```
 
@@ -352,6 +370,12 @@ read_count_plt <-
   coord_flip() +
   facet_grid(~mate) +
   ggplot2::labs(y = "Reads", x = "Sample", fill = "Step")
+
+read_count_plt <- if(nrow(samples_tbl) > n_show_max_items) {
+  read_count_plt +
+    ggplot2::theme(axis.text.y = element_blank())
+}
+
 plot_girafe(read_count_plt)
 ```
 
@@ -370,10 +394,17 @@ read_count_plt <-
   ) +
   coord_flip() +
   ggplot2::labs(y = "Reads", x = "Sample", fill = "Step")
+
+if(nrow(samples_tbl) > n_show_max_items) {
+  read_count_plt <-
+    read_count_plt +
+    ggplot2::theme(axis.text.y = element_blank())
+}
 plot_girafe(read_count_plt)
 ```
 
 ```{r, fig.cap="Multiple sequence alignment of most prevalent representative sequences"}
+library(tidyverse)
 tree_plt <-
   tree %>%
   ape::keep.tip(repseqs) %>%
@@ -404,18 +435,28 @@ denoised_tbl %>%
 ```
 
 ```{r, eval = denoising_params$denoising_method == "asv_dada2", fig.cap="Contamination detected and filtered by ITSx"}
-raw_denoised_tbl %>%
+contamination_plt <-
+  raw_denoised_tbl %>%
   ggplot(aes(sample_id, abundance, fill = taxon)) +
   geom_bar(stat = "identity") +
   coord_flip() +
   scale_x_discrete(expand = c(0, 0)) +
-  scale_y_discrete(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0)) +
   scale_fill_manual(values = its_taxa_colors) +
   labs(
     x = "Sample",
     y = "Abundance (%)",
     fill = "Taxon"
   )
+
+
+if(nrow(samples_tbl) > n_show_max_items) {
+  contamination_plt <-
+    contamination_plt +
+    ggplot2::theme(axis.text.y = element_blank())
+}
+
+contamination_plt
 ```
 
 ## Notes
