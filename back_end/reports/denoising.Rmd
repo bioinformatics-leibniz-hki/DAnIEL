@@ -130,6 +130,70 @@ passed_qc_failed_denoising_samples <-
 - Samples passed qc but failed denoising: `r {passed_qc_failed_denoising_samples %>% paste0(collapse = ", ")}`
 ```
 
+```{r}
+raw_denoised_csv_path <-
+  denoising_dir %>%
+  paste0("/raw_denoised.csv")
+
+filtered_positions_path <-
+    denoising_dir %>%
+    paste0("/filtered.positions.txt")
+
+sanity_eval <-
+  denoising_params$denoising_method == "asv_dada2" &&
+  file.exists(raw_denoised_csv_path) &&
+  file.exists(filtered_positions_path)
+```
+
+```{r, eval = sanity_eval}
+raw_denoised_tbl <-
+  raw_denoised_csv_path %>%
+  readr::read_csv() %>%
+  tidyr::pivot_longer(-sample_id, names_to = "ASV", values_to = "abundance") %>%
+  dplyr::group_by(sample_id) %>%
+  dplyr::mutate(abundance = abundance / sum(abundance))
+
+detect_region <- purrr::partial(stringr::str_detect, pattern = "[0-9]+-[0-9]+")
+
+itsx_denoised_tbl <-
+  filtered_positions_path %>%
+  read_tsv(col_names = FALSE) %>%
+    transmute(
+      ASV = X1,
+      SSU = X3 %>% detect_region(),
+      ITS1 = X4 %>% detect_region(),
+      `5.8S` = X5 %>% detect_region(),
+      ITS2 = X6 %>% detect_region(),
+      LSU = X7 %>% detect_region()
+    ) %>%
+    pivot_longer(-ASV, names_to = "region", values_to = "detected") %>%
+    mutate(region = region %>% factor(levels = c("SSU", "ITS1", "5.8S", "ITS2", "LSU")))
+
+sanity_plt <-
+  raw_denoised_tbl %>%
+  dplyr::left_join(itsx_denoised_tbl) %>%
+    dplyr::group_by(sample_id, region, detected) %>%
+    dplyr::summarise(abundance = sum(abundance)) %>%
+    dplyr::filter(detected) %>%
+    ggplot2::ggplot(ggplot2::aes(region, sample_id, fill = abundance)) +
+      ggiraph::geom_tile_interactive(aes(tooltip = sample_id)) +
+      ggplot2::scale_x_discrete(expand = c(0, 0)) +
+      ggplot2::scale_y_discrete(expand = c(0, 0)) +
+      ggplot2::labs(
+        x = "Genomic region",
+        y = "Sample",
+        fill = "Raw abundance (%)"
+      )
+
+sanity_plt <- if(nrow(samples_tbl) > n_show_max_items) {
+  sanity_plt +
+    ggplot2::theme(axis.text.y = element_blank())
+}
+
+plot_girafe(sanity_plt)
+```
+
+
 ```{r, eval = !available && denoising_params$denoising_method == "asv_dada2"}
 "denoising/selected_denoising/" %>%
   list.files(pattern = "log.txt$", recursive = TRUE, full.names = TRUE) %>%
