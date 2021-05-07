@@ -75,7 +75,6 @@ RUN conda env update --file base.conda_env.yml && \
 	conda clean --yes --all
 
 # Snakemake
-COPY example ./example
 COPY back_end/daniel.build.snakefile.py back_end/daniel.build.snakefile.py
 COPY back_end/envs back_end/envs
 
@@ -105,6 +104,9 @@ RUN	Rscript back_end/install_r/install.R
 COPY danielLib ./danielLib
 RUN R -e "devtools::install('danielLib', upgrade = 'never')"
 
+# fix ggtree missing
+RUN R -e "devtools::install_bioc('3.11/ggtree', upgrade = 'always')"
+
 #
 # Merge R and conda
 #
@@ -115,6 +117,9 @@ COPY --from=r /usr/local/lib/R/site-library /usr/local/lib/R/site-library
 
 # config files of root home
 COPY back_end/home /root/
+
+# Fix None zero returncode: biom convert in pipits_process
+RUN source activate /opt/conda/envs/3e5aa2f1/ && conda install -y h5py
 
 #
 # Production stage
