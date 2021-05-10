@@ -37,7 +37,7 @@ rule create_trimming_fasta:
                     adapter_file.write(params["adapter_fasta"])
 
             if params["include_revcomp_primers"]:
-                os.system(f"add_fasta_reverse_comp.sh <(echo -e '{params.adapter_fasta}') {output}")
+                os.system(f"cat '{output}' | add_fasta_reverse_comp.sh >> {output}")
 
 
 rule before_qc:
