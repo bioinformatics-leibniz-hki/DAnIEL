@@ -15,7 +15,8 @@
         "min_quality_leading": 25,
         "additional_adapter_files": {},
         "min_qc_read_count": 0,
-        "qc_exclusion_criteria": {}
+        "qc_exclusion_criteria": {},
+        "max_reads_count": 100000
       }
     },
     "denoising_params": {
@@ -53,6 +54,7 @@
     },
     "analysis_params": {
       "Selected Analysis": {
+	"analysis_groupings": ["project", "disease", "low_seqdepth"],
         "correlation_method": "spearman",
         "correlation_grouping": "all",
         "banocc_chains": 10,

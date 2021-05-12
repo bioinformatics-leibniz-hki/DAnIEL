@@ -15,7 +15,8 @@
         "min_quality_leading": 25,
         "additional_adapter_files": ["NexteraPE-PE.fa", "TruSeq2-PE.fa", "TruSeq3-PE-2.fa"],
         "min_qc_read_count": 1000,
-        "qc_exclusion_criteria": ["fastqc_adapter_content_failed", "fastqc_per_base_n_content_failed", "fastqc_per_base_sequence_quality_failed", "fastqc_per_sequence_quality_scores_failed", "min_qc_read_count_failed"]
+        "qc_exclusion_criteria": ["fastqc_adapter_content_failed", "fastqc_per_base_n_content_failed", "fastqc_per_base_sequence_quality_failed", "fastqc_per_sequence_quality_scores_failed", "min_qc_read_count_failed"],
+        "max_reads_count": 100000
       }
     },
     "denoising_params": {
@@ -26,7 +27,7 @@
         "identity_threshold": 0.97,
         "max_n": 0,
         "min_q": 0,
-        "max_ee": 22,
+        "max_ee": "2,2",
         "trunc_q": 2,
         "selected_qc_params": "selected_qc"
       }
@@ -53,6 +54,7 @@
     },
     "analysis_params": {
       "selected_analysis": {
+        "analysis_groupings": ["project", "disease", "low_seqdepth"],  
         "correlation_method": "banocc",
         "correlation_grouping": "all",
         "banocc_chains": 10,

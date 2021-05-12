@@ -15,7 +15,8 @@
         "min_quality_leading": 25,
         "additional_adapter_files": "NexteraPE-PE.fa",
         "min_qc_read_count": 1000,
-        "qc_exclusion_criteria": "fastqc_per_base_n_content_failed"
+        "qc_exclusion_criteria": "fastqc_per_base_n_content_failed",
+        "max_reads_count": 100000
       }
     },
     "denoising_params": {
@@ -53,6 +54,7 @@
     },
     "analysis_params": {
       "selected_analysis": {
+        "analysis_groupings": ["project", "disease", "low_seqdepth"],
         "correlation_method": "sparcc",
         "correlation_grouping": "all",
         "banocc_chains": 10,
