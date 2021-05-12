@@ -36,6 +36,7 @@ COPY front_end/index.html /srv/shiny-server/
 #
 
 FROM base2 as production
+RUN R -e "install.packages('profvis')"
 
 COPY front_end /srv/shiny-server/latest
 CMD mv /srv/shiny-server/latest/index.html /srv/shiny-server/index.html
@@ -50,7 +51,7 @@ CMD env > /home/shiny/.Renviron && \
 #
 
 FROM base2 as dev
-
+RUN R -e "install.packages('profvis')"
 # parse env vars to shiny apps and start shiny server
 CMD env > /home/shiny/.Renviron && \
 	chown shiny:shiny -R /userdat && \

@@ -7,7 +7,7 @@ output:
     df_print: kable
 params:
   reports_dir: /sbidata/server/daniel/latest/repo/back_end/reports/
-  project_dir: /sbidata/server/daniel/latest/userdat/test_single
+  project_dir: /home/daniel/prj/7-daniel/userdat/example_human_its1/
   db_dir: /sbidata/server/daniel/latest/db/
 ---
 
@@ -101,7 +101,7 @@ plot_girafe(classified_plt)
 
 
 ```{r, fig.cap = "Fraction of denoised abundance unclassified at any given taxonomic rank"}
-abundance_classified_tbl <-
+abundance_classified_plt <-
   phylotyped_tbl %>%
   dplyr::inner_join(denoised_tbl, by = c("sequence" = "denoised")) %>%
   tidyr::gather(taxrank, taxon, taxa) %>%
@@ -112,16 +112,25 @@ abundance_classified_tbl <-
   # get farction of unclassified abundance
   dplyr::group_by(sample_id, taxrank) %>%
   dplyr::summarise(abundance_classified_perc = 100 - sum(abundance)) %>%
-  dplyr::mutate(taxrank = taxrank %>% factor(levels = taxa, ordered = TRUE))
-
-abundance_classified_plt <-
-   abundance_classified_tbl %>%
-   dplyr::mutate(tooltip = sprintf("Sample:%s<br>Rank:%s<br>Classified:%.2f%%", sample_id, taxrank, abundance_classified_perc)) %>%
+  dplyr::mutate(
+    taxrank = taxrank %>% factor(levels = taxa, ordered = TRUE),
+    tooltip = sprintf("Sample:%s<br>Rank:%s<br>Classified:%.2f%%", sample_id, taxrank, abundance_classified_perc)
+  ) %>%
+  dplyr::mutate() %>%
    ggplot2::ggplot(aes(sample_id, taxrank, fill = abundance_classified_perc, tooltip = tooltip)) +
-     ggiraph::geom_tile_interactive() +
      ggplot2::coord_flip() +
      ggplot2::labs(x = "Sample", y = "Taxonomic rank", fill = "Classified\ndenoised\nabundance (%)")
- plot_girafe(abundance_classified_plt)
+
+abundance_classified_plt <- if(denoised_tbl$sample_id %>% unique() %>% length() > n_show_max_items) {
+    abundance_classified_plt +
+    ggplot2::geom_tile() +
+    ggplot2::theme(axis.text.y = element_blank())
+} else {
+  abundance_classified_plt +
+    ggiraph::geom_tile_interactive()
+}
+
+plot_girafe(abundance_classified_plt)
 ```
 
 ```{r, fig.cap = "Distribution of classification confidence among all classifications"}

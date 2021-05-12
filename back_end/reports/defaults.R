@@ -96,3 +96,5 @@ scale_color_discrete <- function(...) ggplot2::scale_color_viridis_d(...)
 scale_color_continuous <- function(...) ggplot2::scale_color_viridis_c(...)
 scale_colour_discrete <- function(...) ggplot2::scale_colour_viridis_d(...)
 scale_colour_continuous <- function(...) ggplot2::scale_colour_viridis_c(...)
+
+n_show_max_items <- 50

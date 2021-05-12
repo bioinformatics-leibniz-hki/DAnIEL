@@ -15,10 +15,21 @@
 
 queue_file=$DANIEL_USERDAT_DIR/queue
 queue_file_check_interval=10
+
+
 jobs_per_project=$(nproc | awk '{print $1-1}')
+
+DANIEL_JOBS_PER_PROJECT
+
 conda_prefix=/opt/conda/envs/
 snakefile=/app/back_end/daniel.snakefile.py
-threads=10
+
+if [ -z "${DANIEL_THREADS}" ]; then 
+    DANIEL_THREADS=10
+else 
+    DANIEL_THREADS=${DANIEL_THREADS}
+fi
+
 
 # start crontabs e.g. for auto removing old projects
 echo "1 * * * * root find $DANIEL_USERDAT_DIR -maxdepth 1 -mindepth 1 -type d -mtime +35 | grep -v -E 'example|templates' | xargs rm -rf" > /etc/cron.d/remove_projects
@@ -79,8 +90,8 @@ while true; do
 				--conda-prefix $conda_prefix \
 				--snakefile $snakefile \
 				--configfile $configfile \
-				--jobs $jobs_per_project \
-				--cores $threads
+				--jobs $DANIEL_THREADS \
+				--cores $DANIEL_THREADS
 			source deactivate
 
 			# try to rerun report if missing

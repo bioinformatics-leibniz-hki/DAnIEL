@@ -90,7 +90,7 @@ abundance_mod <- function(input, output, session, norm_features_tbl, raw_feature
         session = session,
         inputId = "samples_grouping",
         choices = sample_groupings,
-        selected = sample_groupings[[1]]
+        selected = "None"
       )
 
       annotation_groupings <-
@@ -105,7 +105,7 @@ abundance_mod <- function(input, output, session, norm_features_tbl, raw_feature
         session = session,
         inputId = "annotation_groupings",
         choices = annotation_groupings,
-        selected = annotation_groupings
+        selected = NULL
       )
     }
   )
@@ -143,7 +143,6 @@ abundance_mod <- function(input, output, session, norm_features_tbl, raw_feature
     }
   })
 
-
   heatmap <- shiny::reactive({
     features_tbl <-
       features_tbl() %>%
@@ -176,11 +175,14 @@ abundance_mod <- function(input, output, session, norm_features_tbl, raw_feature
       purrr::pluck(input$samples_grouping)
 
     if (is.null(samples_split)) {
-      samples_title <- "samples"
+      samples_title <- "sample"
     } else {
       samples_title <- samples_split %>%
         unique() %>%
-        as.character()
+        as.character() %>%
+        tidyr::replace_na("NA") %>%
+        # assume lex sorting
+        sort()
     }
 
     if (is.null(input$annotation_groupings)) {
@@ -190,6 +192,11 @@ abundance_mod <- function(input, output, session, norm_features_tbl, raw_feature
         samples_tbl() %>%
         dplyr::filter(sample_id %in% filtered_samples()) %>%
         dplyr::select_at(input$annotation_groupings) %>%
+        
+        # enforce numeric cols to be numeric
+        dplyr::mutate_all(as.character) %>%
+        readr::type_convert() %>%
+        
         dplyr::mutate_if(
           .predicate = ~ is.character(.x) || is.factor(.x),
           .funs = ~ .x %>%

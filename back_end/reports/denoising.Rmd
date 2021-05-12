@@ -8,7 +8,7 @@ output:
     df_print: paged
 params:
   reports_dir: /sbidata/server/daniel/latest/repo/back_end/reports/
-  project_dir: /home/daniel/prj/7-daniel/userdat/test_human
+  project_dir: /mnt/raid0/daniel/etc/userdat/example/
   db_dir: /home/daniel/prj/7-daniel/db
 ---
 
@@ -185,8 +185,9 @@ sanity_plt <-
         fill = "Raw abundance (%)"
       )
 
-sanity_plt <- if(nrow(samples_tbl) > n_show_max_items) {
-  sanity_plt +
+if(nrow(samples_tbl) > n_show_max_items) {
+  sanity_plt <-
+    sanity_plt +
     ggplot2::theme(axis.text.y = element_blank())
 }
 
@@ -435,8 +436,9 @@ read_count_plt <-
   facet_grid(~mate) +
   ggplot2::labs(y = "Reads", x = "Sample", fill = "Step")
 
-read_count_plt <- if(nrow(samples_tbl) > n_show_max_items) {
-  read_count_plt +
+if(nrow(samples_tbl) > n_show_max_items) {
+  read_count_plt <-
+    read_count_plt +
     ggplot2::theme(axis.text.y = element_blank())
 }
 

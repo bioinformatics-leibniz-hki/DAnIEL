@@ -37,7 +37,9 @@ h4 {
 	margin-top: 1em;
 }
 
-
+p {
+	margin: 0;
+}
 
 caption, .caption {
 	font-size: 1.1em;

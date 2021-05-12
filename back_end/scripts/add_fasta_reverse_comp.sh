@@ -17,8 +17,5 @@
 #
 
 in_file=${1:-/dev/stdin}
-out_file=${2:-/dev/stdout}
 
-cat $in_file \
-	| bioawk -c fastx '{print ">"$name"_rev";print revcomp($seq)}' \
-	>> $out_file
+cat $in_file | bioawk -c fastx '{print ">"$name" "$comment" rev";print revcomp($seq)}'

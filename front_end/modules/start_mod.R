@@ -34,7 +34,7 @@ QC_PARAM_SET <- c(
   "phred_format", "adapter_fasta", "include_revcomp_primers",
   "min_read_length", "qc_error_rate",
   "min_quality_trailing", "min_quality_leading", "additional_adapter_files",
-  "min_qc_read_count", "qc_exclusion_criteria"
+  "min_qc_read_count", "qc_exclusion_criteria", "max_reads_count"
 )
 
 #' UI ids for denoising parameters
@@ -210,7 +210,7 @@ panel_features <- function(ns, ...) {
       choices = c(
         "Remove unknown sequences" = "remove", "Infer taxon names from upstream taxonomic ranks and add sp." = "infer"
       ),
-      selected = "remove"
+      selected = "infer"
     ) %>% update_label()
   )
 }
@@ -371,6 +371,11 @@ panel_qc <- function(ns, ...) {
       label = "Minimum number of QC reads",
       value = 100
     ) %>% update_label(),
+    shiny::numericInput(
+      inputId = ns("max_reads_count"),
+      label = "Maximum number of raw reads",
+      value = 100e3
+    ) %>% update_label(),
     shiny::checkboxGroupInput(
       inputId = ns("qc_exclusion_criteria"),
       label = "Exclude sample if any of these tests failed",
@@ -385,7 +390,7 @@ panel_qc <- function(ns, ...) {
       ),
       selected = c(
         "fastqc_adapter_content_failed", "fastqc_per_base_n_content_failed",
-        "fastqc_per_base_sequence_quality_failed", "fastqc_per_sequence_quality_scores_failed",
+        "fastqc_per_sequence_quality_scores_failed",
         "fastqc_sequence_length_distribution_failed", "min_qc_read_count_failed"
       )
     ) %>% update_label()
@@ -605,7 +610,6 @@ start_mod <- function(input, output, session, project, input_mod) {
   output$panel_pipits <- shiny::renderUI(panel_pipits())
   output$panel_dada2 <- shiny::renderUI(panel_dada2())
   output$panel_blast <- shiny::renderUI(panel_blast())
-  message("here")
 
   shiny::observeEvent(
     eventExpr = input_mod$samples_tbl(),

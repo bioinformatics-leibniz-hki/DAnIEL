@@ -103,7 +103,7 @@ features_mod <- function(input, output, session, project) {
       file.exists() %>%
       shiny::req()
 
-    readr::read_csv(file_path)
+    danielLib::read_csv_guess_coltypes(file_path)
   })
 
   alphadiv_tbl <- shiny::reactive({
@@ -162,7 +162,7 @@ features_mod <- function(input, output, session, project) {
     samples_tbl = samples_tbl,
     features_params = features_params
   )
-
+  
   output$download_features_raw <- shiny::downloadHandler(
     filename = "raw_features.xlsx",
     content = function(file) {

@@ -88,7 +88,7 @@ plot_boxplot <- function(tbl, grouping, sample_id) {
               list(c(.[1], .[2]))
             },
             symnum.args = list(cutpoints = c(0, 0.001, 0.01, 0.05, 1), symbols = c("\u2605\u2605\u2605", "\u2605\u2605", "\u2605", "ns")),
-            hide.ns = TRUE,
+            hide.ns = FALSE,
             method = "wilcox"
           )
       },
@@ -96,7 +96,14 @@ plot_boxplot <- function(tbl, grouping, sample_id) {
         for (facet in facets) {
           plt <-
             plt +
-            danielLib::stat_compare_medians(data = tbl, g = grouping, x = "value", facet_key = "key", facet_val = facet)
+            danielLib::stat_compare_medians(
+              data = tbl,
+              g = grouping,
+              x = "value",
+              facet_key = "key",
+              facet_val = facet,
+              step.increase	= 0.1
+            )
         }
         plt
       }

@@ -608,9 +608,14 @@ if (one_way_aov_cols %>% length() > 0) {
     } %>%
     dplyr::select(-data) %>%
     tidyr::unnest(test) %>%
-    adjust_pval_if_possible()
+    adjust_pval_if_possible() %>%
+    dplyr::filter(dplyr::across(
+      dplyr::contains("test"), ~ ! .x %>% stringr::str_detect("Error :")
+      )
+    )
+  
 
-  if(is.null(one_way_aov_test_tbl$error)) {
+  if(nrow(one_way_aov_test_tbl) > 0) {
   
   one_way_aov_post_hoc_test_groups_tbl <-
     one_way_aov_test_tbl %>%
@@ -669,3 +674,4 @@ test_tbl %>%
   dplyr::select(-dplyr::matches("data")) %>%
   dplyr::select(-dplyr::matches("^test$")) %>%
   readr::write_csv(args$out_csv, na = "")
+

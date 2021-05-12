@@ -7,8 +7,8 @@ output:
     df_print: kable
 params:
   reports_dir: /sbidata/server/daniel/latest/repo/back_end/reports/
-  project_dir: /sbidata/server/daniel/latest/userdat/test_no
-  db_dir: /sbidata/server/daniel/latest/db/
+  project_dir: /home/daniel/prj/7-daniel/userdat/example_human_its1/
+  db_dir:  /home/daniel/prj/7-daniel/db
 ---
 
 ```{r, include=FALSE}
@@ -85,12 +85,13 @@ Furthermore, primer and adapter sequences are cut.
 ## Methods
 - Cutadapt was used to trim adapter and primer sequences [@martin2011cutadapt]
   - Adapter files used for trimming: `r {qc_params$additional_adapter_files}`
-  - Additional sequences (e.g. primers) used for trimming: `r {qc_params$adapter_fasta}`
+  - Additional sequences (e.g. primers) used for trimming: <br><pre>`r {qc_params$adapter_fasta %>% str_replace_all("\n", "<br>")}`</pre>
   - The reverse complement of these sequences were `r {qc_params$include_revcomp_primers %>% ifelse("", "not")}` included
   - Phred score format `r {qc_params$phred_format}` was defined
   - Minimum Phred score was `r {qc_params$min_quality_leading}` for leading and `r {qc_params$min_quality_trailing}` for trailing bases
   - Minimum read length was `r {qc_params$min_read_length}`nt
 - Samples fitting any of these criteria were excluded from downstream analysis: `r {qc_params$qc_exclusion_criteria %>% magrittr::inset("min_qc_read_count_failed", sprintf("min qc reads < %d", qc_params$min_qc_read_count)) %>% str_replace_all("_", " ")}`. FastQC was used to evaluate the tests.
+- Downsampling was applied to `r {qc_params$max_reads_count}` reads per sample
 - MultiQC was used to combine QC results from all samples [@pmid27312411]
 
 ## Results
@@ -106,13 +107,25 @@ qc_plt <-
     test_name = test_name %>% stringr::str_replace_all("_", " "),
     tooltip = sprintf("Sample:%s<br>Test:%s<br>Result:%s", sample_id, test_name, test_result)
   ) %>%
-  ggplot2::ggplot(aes(sample_id, test_name, fill = test_result, tooltip = tooltip)) +
-    ggiraph::geom_tile_interactive(size = 2.5) +
-    ggplot2::coord_flip() +
-    ggplot2::facet_wrap(~ qc_step) +
-    ggplot2::scale_fill_manual(values = c("fail" = "#cc3300", "pass" = "#339900", "warn" = "#ffcc00")) + 
-    ggplot2::theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  ggplot2::ggplot(aes(sample_id, test_name, fill = test_result)) +
+  ggplot2::facet_wrap(~ qc_step) +
+  ggplot2::coord_flip() +
+  ggplot2::scale_fill_manual(values = c("fail" = "#cc3300", "pass" = "#339900", "warn" = "#ffcc00")) + 
+  ggplot2::labs(x = "Sample", y = "Test", fill = "Result")
+
+qc_plt <- if(qc_tbl$sample_id %>% unique() %>% length() > n_show_max_items) {
+  qc_plt +
+    ggplot2::geom_tile(size = 2.5) +
+    ggplot2::theme(
+      axis.text.x = element_text(angle = 45, hjust = 1),
+      axis.text.y = element_blank()
+    ) +
     ggplot2::labs(x = "Sample", y = "Test", fill = "Result")
+} else {
+  qc_plt +
+    ggiraph::geom_tile_interactive(aes(tooltip = tooltip), size = 2.5) +
+    ggplot2::theme(axis.text.x = element_text(angle = 45, hjust = 1))
+}
 plot_girafe(qc_plt)
 ```
 
@@ -123,14 +136,23 @@ read_loss_plt <-
   dplyr::ungroup() %>%
   dplyr::mutate(sample_id = sample_id %>% reorder(read_loss_perc)) %>%
   ggplot2::ggplot(aes(sample_id, read_loss_perc, tooltip = sprintf("%.2f%%", read_loss_perc))) +
-    ggiraph::geom_col_interactive(position = "identity") +
     ggplot2::coord_flip() +
     ggplot2::scale_y_continuous(expand = c(0, 0)) +
     ggplot2::labs(y = "Read loss (%)", x = "Sample")
+
+read_loss_plt <- if(qc_tbl$sample_id %>% unique() %>% length() > n_show_max_items) {
+    read_loss_plt +
+        ggplot2::geom_col() +
+        ggplot2::theme(axis.text.y = element_blank())
+} else {
+  read_loss_plt +
+        ggiraph::geom_col_interactive(position = "identity")
+}
+
 plot_girafe(read_loss_plt)
 ```
 
-```{r, eval = excluded_samples_tbl %>% dim() %>% magrittr::extract(1) > 0}
+```{r, eval = !is.null(excluded_samples_tbl) && nrow(excluded_samples_tbl) > 0}
 excluded_samples_tbl %>%
   dplyr::select(sample_id, reason) %>%
   dplyr::distinct_all() %>%

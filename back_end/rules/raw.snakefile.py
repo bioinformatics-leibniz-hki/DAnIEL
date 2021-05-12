@@ -36,7 +36,8 @@ rule parse_input_files:
         output:
                 read_file = RAW_DIR + "{sample}_{mate}.raw.fq.gz"
         params:
-                bioawk_path = SCRIPT_DIR + "parse_fastq.bioawk"
+                bioawk_path = SCRIPT_DIR + "parse_fastq.bioawk",
+                max_reads_count =  QC_PARAMS["max_reads_count"]
         wildcard_constraints:
                 sample = "|".join(SAMPLES)
         conda:
@@ -45,6 +46,7 @@ rule parse_input_files:
                 """
                 zcat {input.read_file} \
                         | bioawk -c fastx -f {params.bioawk_path} \
+                        | head -n $(awk -v x="{params.max_reads_count}" 'BEGIN{{print sprintf("%i", x*4)}}') \
                         | gzip \
                         > {output.read_file}
                 """

@@ -71,7 +71,7 @@ input_mod_UI <- function(id) {
     shiny::div(
       paste0(
         "This page is about uploading own samples (FASTQ raw reads) and it's meta data (Excel or CSV). ",
-        "Furthermore, existing samples from the data base NCBI SRA can be added to the project."
+        "Furthermore, external samples from the data base NCBI SRA can be added to the project."
       )
     ),
     shiny::h2("Upload local samples"),
@@ -89,24 +89,24 @@ input_mod_UI <- function(id) {
     shiny::h2("Add external samples"),
     shiny::textAreaInput(
       inputId = ns("sra_ids"),
-      label = "SRA Accessions (one id per line)",
+      label = "SRA accessions (one id per line)",
       placeholder = "SRR5098341\nSRR5098371\nSRR5098409",
       height = "150px"
     ) %>% update_label(),
     shiny::selectInput(
       inputId = ns("project"),
-      label = "Existing project",
+      label = "External project",
       choices = "",
       multiple = FALSE
     ) %>% update_label(),
     shiny::textInput(
       inputId = ns("project_filter_query"),
-      label = "Filter query for existing projects",
+      label = "Filter query for external projects",
       placeholder = "total_spots >= 1000"
     ) %>% update_label(),
     shiny::actionButton(
       inputId = ns("add_samples"),
-      label = "Add existing samples",
+      label = "Add external samples",
       icon = icon("plus")
     ),
     shiny::h2("Samples overview"),
@@ -285,7 +285,7 @@ input_mod <- function(input, output, session, project) {
     }
   )
 
-  # add existing SRA ids
+  # add external SRA ids
   shiny::observeEvent(
     eventExpr = input$add_samples,
     handlerExpr = {
@@ -359,7 +359,7 @@ input_mod <- function(input, output, session, project) {
     }
   )
 
-  # add existing projects
+  # add external projects
   shiny::observeEvent(
     eventExpr = input$add_samples,
     handlerExpr = {
@@ -424,7 +424,7 @@ input_mod <- function(input, output, session, project) {
 
       projects_samples_tbl %>%
         nrow() %>%
-        sprintf("%s existing sample(s) added", .) %>%
+        sprintf("%s external sample(s) added", .) %>%
         shiny::showNotification(ui = ., duration = 15)
     }
   )

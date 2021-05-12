@@ -137,13 +137,17 @@ rule dada2:
                     --cpu {threads} \
                     --save_regions {params.its_region}
 
-                # keep only fungal seqs with the selected subregion
+                # Extract only fungal seqs with the selected subregion
                 bioawk \
                     -c fastx \
                     '$name ~ /\"|F|\"/ {{print \">\"$name\"\\n\"$seq}}' \
                     {params.denoising_dir}/filtered.{params.its_region}.fasta \
                     | sed 's/|[A-Z]|ITS[12]//' \
                     > {params.denoising_dir}/denoised.fasta
+
+                # keep unassigned sequences
+                cat {params.denoising_dir}/filtered_no_detections.fasta \
+                        >> {params.denoising_dir}/denoised.fasta
 
                 filter_denoised_counts.R \
                          {params.denoising_dir}/raw_denoised.csv \
@@ -191,6 +195,8 @@ rule pipits_parse_repseqs:
                 bioawk_path = SCRIPT_DIR + "parse_fasta.bioawk"
         conda:
                 "../envs/denoising.conda_env.yml"
+        threads:
+               MAX_THREADS
         shell:
                 """
                 bioawk -c fastx -f {params.bioawk_path} {input.fasta_path} > {output.fasta_path}
@@ -280,7 +286,7 @@ rule pipits_process:
                         -o {params.out_dir} \
                         -d {params.identity_threshold} \
                         -t {threads} \
-                        $([[ "{params.include_singletons}" == "False" ]] \
+                        $([[ "{params.include_singletons}" == "True" ]] \
                             && echo "--includeuniqueseqs") \
                         --unite 02.02.2019 && \
                 # remove db link
