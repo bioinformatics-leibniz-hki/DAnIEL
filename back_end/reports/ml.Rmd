@@ -36,10 +36,15 @@ classifiers_l <- list(
 )
 
 ml_env <- environment()
-paste0(ml_dir, "ml.RData") %>% load(envir = ml_env)
 
-sbf_ctrl <- ml_env$sbf_ctrl
-rfe_ctrl <- ml_env$rfe_ctrl
+tryCatch(
+  paste0(ml_dir, "ml.RData") %>% load(envir = ml_env)
+
+  sbf_ctrl <- ml_env$sbf_ctrl
+  rfe_ctrl <- ml_env$rfe_ctrl,
+
+  error = function(e) NULL
+)
 ```
 
 
@@ -47,6 +52,15 @@ rfe_ctrl <- ml_env$rfe_ctrl
 Machine Learning (ML) is the automated process of using features to build a model able to distinguish between any given classes.
 This model can be used to predict new data sets.
 Furthermore, features which are important in this classification can be identified.
+
+```{rmd, eval=is.null(ml_env)}
+## Results
+
+- ML failed and no result was produced
+```
+```{r, eval=is.null(ml_env)}
+knitr::knit_exit()
+```
 
 ```{rmd, eval=ml_env$tested_cols %>% length() == 0}
 ## Results
