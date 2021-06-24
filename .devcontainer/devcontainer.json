@@ -1,0 +1,17 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the README at:
+// https://github.com/microsoft/vscode-dev-containers/tree/v0.183.0/containers/debian
+{
+	"name": "daniel_backend",
+	"build": {
+		"context": ".",
+		"dockerfile": "Dockerfile"
+	},
+	// "mounts": [
+	// 	"source=../userdat,target=/userdat,type=bind"
+	// ],
+	"remoteUser": "root",
+	"extensions": [
+		"reditorsupport.r-lsp",
+		"ikuyadeu.r"
+	]
+}
