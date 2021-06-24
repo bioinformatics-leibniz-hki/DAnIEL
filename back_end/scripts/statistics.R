@@ -74,7 +74,7 @@ args <- base::list(
     opt_str = "--groupings",
     type = "character",
     default = NULL,
-    help = "column names of samples-csv used to group samples in single quotes separated by a comma"
+    help = "column names of samples-csv used to group samples in single quotes separated by ###"
   )
 ) %>%
   optparse::OptionParser(
@@ -121,7 +121,7 @@ read_csv_guess_coltypes <- function(csv_path) {
 
   factor_cols <-
     tbl %>%
-    dplyr::select_if( ~ ! .x %>% is.numeric()) %>%
+    dplyr::select_if(~ !.x %>% is.numeric()) %>%
     tidyr::gather(k, v) %>%
     dplyr::filter(!is.na(v)) %>%
     dplyr::group_by(k, v) %>%
@@ -156,13 +156,17 @@ test_cols <-
   dplyr::filter(
     # more than one unique obervation per group column
     n > 1 &&
-      # remove group columns w/o replicas
+      # remove group columns in which all levels are the same
       n < length(samples_tbl$sample_id) &&
       # exclude demultiplexing info columns
       !k %in% c("barcode_file", "barcode_seq")
   ) %>%
   dplyr::pull(k) %>%
-  intersect(args$groupings)
+  intersect(args$groupings) %>%
+  # add numeric cols for correlation tests
+  union(
+    samples_tbl %>% purrr::map_chr(class) %>% purrr::keep(~ .x == "numeric") %>% names()
+  )
 
 message("Testing:", test_cols %>% paste0(collapse = ","))
 
@@ -212,7 +216,7 @@ cor_cols <- numeric_cols
 #' try any function which works with broom::tidy
 #' @param f function to try
 #' @return tibble. either tidy if
-try_func <- function(func, paired, ...) {
+try_func <- function(func, ...) {
   tryCatch(
     expr = func(...) %>% broom::tidy(),
     error = function(e) tibble::tibble(error = e)
@@ -236,7 +240,8 @@ paired_two_groups_test <- function(tbl, func = stats::wilcox.test, ...) {
   }
   res_tbl <- tibble(error = character(), paired = logical())
 
-  group_vals <- tbl$group_val %>%
+  group_vals <-
+    tbl$group_val %>%
     na.omit() %>%
     unique()
 
@@ -601,7 +606,8 @@ if (one_way_aov_cols %>% length() > 0) {
     dplyr::inner_join(features_tbl, by = "sample_id") %>%
     dplyr::group_by(group_var, feature) %>%
     tidyr::nest() %>%
-    dplyr::mutate(test_type = "pre one way AOV") %>% {
+    dplyr::mutate(test_type = "pre one way AOV") %>%
+    {
       .x <- .
       .x[["test"]] <- pbmclapply(.x$data, function(data) one_way_aov_test(data, func = args$one_way_aov_stat_func))
       .x
@@ -610,40 +616,38 @@ if (one_way_aov_cols %>% length() > 0) {
     tidyr::unnest(test) %>%
     adjust_pval_if_possible() %>%
     dplyr::filter(dplyr::across(
-      dplyr::contains("test"), ~ ! .x %>% stringr::str_detect("Error :")
-      )
-    )
-  
+      dplyr::contains("test"), ~ !.x %>% stringr::str_detect("Error :")
+    ))
 
-  if(nrow(one_way_aov_test_tbl) > 0) {
-  
-  one_way_aov_post_hoc_test_groups_tbl <-
-    one_way_aov_test_tbl %>%
-    dplyr::filter(p.value <= args$max_pvalue) %>%
-    dplyr::select(group_var, feature)
 
-  one_way_aov_post_hoc_test_tbl <-
-    samples_tbl %>%
-    dplyr::select(sample_id, one_way_aov_cols) %>%
-    tidyr::gather(group_var, group_val, -sample_id) %>%
-    dplyr::inner_join(features_tbl, by = "sample_id") %>%
-    # filter significant pre tests
-    dplyr::inner_join(one_way_aov_post_hoc_test_groups_tbl, by = c("group_var", "feature")) %>%
-    dplyr::group_by(group_var, feature) %>%
-    tidyr::nest() %>%
-    dplyr::mutate(test_type = "post one way AOV")
+  if (nrow(one_way_aov_test_tbl) > 0) {
+    one_way_aov_post_hoc_test_groups_tbl <-
+      one_way_aov_test_tbl %>%
+      dplyr::filter(p.value <= args$max_pvalue) %>%
+      dplyr::select(group_var, feature)
 
-  # BUG: purrr::map does not work.
-  # WORARROUND: use lapply instead
-  one_way_aov_post_hoc_test_tbl$test <- one_way_aov_post_hoc_test_tbl$data  %>% pbmclapply(dunn_test)
+    one_way_aov_post_hoc_test_tbl <-
+      samples_tbl %>%
+      dplyr::select(sample_id, one_way_aov_cols) %>%
+      tidyr::gather(group_var, group_val, -sample_id) %>%
+      dplyr::inner_join(features_tbl, by = "sample_id") %>%
+      # filter significant pre tests
+      dplyr::inner_join(one_way_aov_post_hoc_test_groups_tbl, by = c("group_var", "feature")) %>%
+      dplyr::group_by(group_var, feature) %>%
+      tidyr::nest() %>%
+      dplyr::mutate(test_type = "post one way AOV")
 
-  one_way_aov_post_hoc_test_tbl %<>%
-    unnest(test) %>%
-    dplyr::select(-c(term))
+    # BUG: purrr::map does not work.
+    # WORARROUND: use lapply instead
+    one_way_aov_post_hoc_test_tbl$test <- one_way_aov_post_hoc_test_tbl$data %>% pbmclapply(dunn_test)
 
-  test_tbl %<>%
-    dplyr::bind_rows(one_way_aov_test_tbl) %>%
-    dplyr::bind_rows(one_way_aov_post_hoc_test_tbl)
+    one_way_aov_post_hoc_test_tbl %<>%
+      unnest(test) %>%
+      dplyr::select(-c(term))
+
+    test_tbl %<>%
+      dplyr::bind_rows(one_way_aov_test_tbl) %>%
+      dplyr::bind_rows(one_way_aov_post_hoc_test_tbl)
   }
 }
 
@@ -674,4 +678,3 @@ test_tbl %>%
   dplyr::select(-dplyr::matches("data")) %>%
   dplyr::select(-dplyr::matches("^test$")) %>%
   readr::write_csv(args$out_csv, na = "")
-
