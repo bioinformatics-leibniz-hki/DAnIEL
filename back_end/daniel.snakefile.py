@@ -25,8 +25,7 @@ if not config:
 
 VERSION = "CI"
 
-MAX_THREADS = 5
-
+MAX_THREADS = os.environ["DANIEL_THREADS"] 
 USERDAT_DIR = os.environ["DANIEL_USERDAT_DIR"] + "/"
 DB_DIR = os.environ["DANIEL_DB_DIR"] + "/"
 SCRIPT_DIR = os.environ["DANIEL_SCRIPT_DIR"] + "/"
