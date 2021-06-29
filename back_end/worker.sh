@@ -16,11 +16,6 @@
 queue_file=$DANIEL_USERDAT_DIR/queue
 queue_file_check_interval=10
 
-
-jobs_per_project=$(nproc | awk '{print $1-1}')
-
-DANIEL_JOBS_PER_PROJECT
-
 conda_prefix=/opt/conda/envs/
 snakefile=/app/back_end/daniel.snakefile.py
 
