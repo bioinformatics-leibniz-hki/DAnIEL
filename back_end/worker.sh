@@ -85,7 +85,6 @@ while true; do
 				--conda-prefix $conda_prefix \
 				--snakefile $snakefile \
 				--configfile $configfile \
-				--jobs $DANIEL_THREADS \
 				--cores $DANIEL_THREADS
 			source deactivate
 

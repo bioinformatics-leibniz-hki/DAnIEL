@@ -48,7 +48,7 @@ args <- base::list(
     type = "integer",
     default = 0,
     help = "Sequences with more than maxN Ns will be discarded"
-  ), 
+  ),
   optparse::make_option(
     "--min-q",
     type = "integer",
@@ -74,6 +74,12 @@ args <- base::list(
     help = "output directory"
   ),
   optparse::make_option(
+    c("-t", "--threads"),
+    type = "double",
+    default = 1,
+    help = "Number of CPU threads used"
+  ),
+  optparse::make_option(
     c("-m", "--min-read-length"),
     type = "double",
     default = 50,
@@ -90,7 +96,10 @@ fwd_filtered_fastq <- base::paste0(args$out_dir, "/", args$sample_name, "_1.filt
 rev_filtered_fastq <- base::paste0(args$out_dir, "/", args$sample_name, "_2.filtered.fq.gz")
 
 # separate max erros for fws and rev read
-args$max_ee <- args$max_ee %>% str_split(",") %>% pluck(1) %>% map_dbl(as.double)
+args$max_ee <- args$max_ee %>%
+  str_split(",") %>%
+  pluck(1) %>%
+  map_dbl(as.double)
 
 base::dir.create(args$out_dir, recursive = TRUE)
 
@@ -106,12 +115,12 @@ filtered <- dada2::filterAndTrim(
   minLen = args$min_read_length,
   rm.phix = TRUE,
   compress = TRUE,
-  multithread = TRUE
+  multithread = args$threads
 )
 
 # learning error model
-fwd_errors <- dada2::learnErrors(fwd_filtered_fastq, multithread = TRUE)
-rev_errors <- dada2::learnErrors(rev_filtered_fastq, multithread = TRUE)
+fwd_errors <- dada2::learnErrors(fwd_filtered_fastq, multithread = args$threads)
+rev_errors <- dada2::learnErrors(rev_filtered_fastq, multithread = args$threads)
 
 fwd_errors_plt <- dada2::plotErrors(fwd_errors, nominalQ = TRUE)
 rev_errors_plt <- dada2::plotErrors(rev_errors, nominalQ = TRUE)
@@ -121,12 +130,12 @@ fwd_derep <- dada2::derepFastq(fwd_filtered_fastq, verbose = TRUE)
 rev_derep <- dada2::derepFastq(rev_filtered_fastq, verbose = TRUE)
 
 # sample inference
-fwd_dada <- dada2::dada(fwd_derep, err = fwd_errors, multithread = TRUE)
-rev_dada <- dada2::dada(rev_derep, err = rev_errors, multithread = TRUE)
+fwd_dada <- dada2::dada(fwd_derep, err = fwd_errors, multithread = args$threads)
+rev_dada <- dada2::dada(rev_derep, err = rev_errors, multithread = args$threads)
 
 merged_pairs <- dada2::mergePairs(fwd_dada, fwd_derep, rev_dada, rev_derep, verbose = TRUE)
 seqtab <- dada2::makeSequenceTable(merged_pairs)
-seqtab_nochim <- dada2::removeBimeraDenovo(seqtab, method = "consensus", multithread = TRUE, verbose = TRUE)
+seqtab_nochim <- dada2::removeBimeraDenovo(seqtab, method = "consensus", multithread = args$threads, verbose = TRUE)
 chimeric_asvs <- base::setdiff(
   seqtab %>% base::colnames() %>% Biostrings::DNAStringSet(),
   seqtab_nochim %>% base::colnames() %>% Biostrings::DNAStringSet()

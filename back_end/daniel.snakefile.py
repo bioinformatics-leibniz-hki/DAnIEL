@@ -17,7 +17,7 @@ import pandas as pd
 
 # Disallow slashes in wildcards. They are only used to separate directories.
 wildcard_constraints:
-    sample="[^/]+",
+    sample = "[^/]+",
 
 
 if not config:
@@ -25,13 +25,24 @@ if not config:
 
 VERSION = "CI"
 
+# Max number of cores available for snakemake
+# Will be partitioned to all concurrent rules
+# Same as argument snakemake --cores
 MAX_THREADS = int(os.environ["DANIEL_THREADS"])
+
+# some rules do not profit using all threads
+# start multiple instances of this rule instead
+# Useful for per sample QC
+SMALL_THREADS = min(8, MAX_THREADS)
+
 USERDAT_DIR = os.environ["DANIEL_USERDAT_DIR"] + "/"
 DB_DIR = os.environ["DANIEL_DB_DIR"] + "/"
 SCRIPT_DIR = os.environ["DANIEL_SCRIPT_DIR"] + "/"
 REPORT_DIR = SCRIPT_DIR + "../reports/"
 
 # samples
+
+
 def str_to_list(x):
     if x == "":
         return []
@@ -39,15 +50,18 @@ def str_to_list(x):
         return [x]
     return x
 
+
 META_SAMPLES = str_to_list(config["input"]["meta_samples"])
 LOCAL_SAMPLES = str_to_list(config["input"]["local_samples"])
 PROJECTS = []
 PROJECTS_SAMPLES = []
 try:
     PROJECTS = list(config["input"]["projects"].keys())
-    PROJECTS_SAMPLES = [config["input"]["projects"][x]["samples"] for x in PROJECTS]
+    PROJECTS_SAMPLES = [config["input"]["projects"]
+                        [x]["samples"] for x in PROJECTS]
     # pool unique samples
-    PROJECTS_SAMPLES = list(set(ft.reduce(lambda x, y: x + y, PROJECTS_SAMPLES)))
+    PROJECTS_SAMPLES = list(
+        set(ft.reduce(lambda x, y: x + y, PROJECTS_SAMPLES)))
 except:
     pass
 SRA_SAMPLES = str_to_list(config["input"]["sra_ids"])
@@ -65,6 +79,8 @@ REV_READS = [x + "_2" for x in SAMPLES]
 READS = FWD_READS + REV_READS
 
 # Last step (analysis) determines reuired upstream steps
+
+
 def get_selected_params_name(cur_step, next_step):
     res = config["params"][next_step + "_params"][selected_params[next_step]][
         "selected_" + cur_step + "_params"
@@ -73,15 +89,18 @@ def get_selected_params_name(cur_step, next_step):
 
 
 def get_selected_params_dir(step):
-    res = PROJECT_DIR + step + "/" + selected_params[step].replace(" ", "_") + "/"
+    res = PROJECT_DIR + step + "/" + \
+        selected_params[step].replace(" ", "_") + "/"
     return res
 
 
 selected_params = {}
 selected_params["analysis"] = config["selected_analysis_params"]
 selected_params["features"] = get_selected_params_name("features", "analysis")
-selected_params["phylotyping"] = get_selected_params_name("phylotyping", "features")
-selected_params["denoising"] = get_selected_params_name("denoising", "phylotyping")
+selected_params["phylotyping"] = get_selected_params_name(
+    "phylotyping", "features")
+selected_params["denoising"] = get_selected_params_name(
+    "denoising", "phylotyping")
 selected_params["qc"] = get_selected_params_name("qc", "denoising")
 
 PROJECT_DIR = USERDAT_DIR + config["project_id"] + "/"
@@ -99,7 +118,10 @@ ML_DIR = ANALYSIS_DIR + "ml/"
 STATISTICS_DIR = ANALYSIS_DIR + "statistics/"
 SUMMARY_DIR = ANALYSIS_DIR + "summary/"
 
-get_params = lambda x: config["params"][x + "_params"][selected_params[x]]
+
+def get_params(x): return config["params"][x + "_params"][selected_params[x]]
+
+
 QC_PARAMS = get_params("qc")
 DENOISING_PARAMS = get_params("denoising")
 PHYLOTYPING_PARAMS = get_params("phylotyping")
@@ -131,7 +153,7 @@ rule all:
     input:
         TARGET_ALL_CLEAN,
     params:
-        prj_dir=PROJECT_DIR,
+        prj_dir = PROJECT_DIR,
     shell:
         """
         # remove empty log files
