@@ -1,0 +1,14 @@
+name: report
+channels:
+ - conda-forge
+ - bioconda
+ - r
+ - defaults
+dependencies:
+ - r-base=3.6.1
+ - r-tidyverse
+ - r-optparse
+ - r-compositions
+ - r-vegan
+ - bioconductor-metagenomeseq
+ - bioconductor-phyloseq
