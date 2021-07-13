@@ -6,10 +6,10 @@ MAINTAINER Daniel Loos "daniel.loos@leibniz-hki.de"
 RUN apt-get update && \
 	apt-get upgrade -y && \
 	apt-get install -y \
-		vim \
-		apt-utils \
-		libmagick++-dev \
-		sshpass && \
+	vim \
+	apt-utils \
+	libmagick++-dev \
+	sshpass && \
 	apt-get clean
 
 WORKDIR /app
@@ -39,7 +39,7 @@ FROM base2 as production
 RUN R -e "install.packages('profvis')"
 
 COPY front_end /srv/shiny-server/latest
-CMD mv /srv/shiny-server/latest/index.html /srv/shiny-server/index.html
+RUN mv /srv/shiny-server/latest/index.html /srv/shiny-server/index.html
 
 # parse env vars to shiny apps and start shiny server
 CMD env > /home/shiny/.Renviron && \
@@ -56,5 +56,5 @@ RUN R -e "install.packages('profvis')"
 CMD env > /home/shiny/.Renviron && \
 	chown shiny:shiny -R /userdat && \
 	chown shiny.shiny /home/shiny/.Renviron && \
-        ls -R /app && \
+	ls -R /app && \
 	runuser -l shiny -c '/usr/bin/shiny-server.sh'
