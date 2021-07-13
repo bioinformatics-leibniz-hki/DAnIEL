@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-
+#
 # Copyright by Daniel Loos
 #
 # Research Group Systems Biology and Bioinformatics - Head: Assoc. Prof. Dr. Gianni Panagiotou
@@ -13,20 +13,19 @@
 # knit Rmd
 #find front_end/ | grep Rmd$ | xargs -i -P $(nproc) R -e "rmarkdown::render('{}')"
 
-export DANIEL_DIR=$PWD/..
-export DANIEL_REPO_DIR=$DANIEL_DIR/repo
-export DANIEL_USERDAT_DIR=$DANIEL_DIR/userdat
-#export DANIEL_DB_DIR=$DANIEL_DIR/db
-export DANIEL_DB_DIR=/sbidata/server/daniel/latest/db
+# source optional file with environment variables:
+# DANIEL_DIR, DANIEL_DB_DIR and DANIEL_USERDAT_DIR
+set -o allexport
+source .env || :
+set +o allexport
 
 # build images
 export COMPOSE_DOCKER_CLI_BUILD=1 
 export DOCKER_BUILDKIT=1
 
-docker pull bioinformaticsleibnizhki/daniel_backend:latest
-docker pull bioinformaticsleibnizhki/daniel_frontend:latest
-
+docker-compose pull
 docker-compose build --parallel
+docker-compose push
 docker-compose up
 
 # docker swarm mode
