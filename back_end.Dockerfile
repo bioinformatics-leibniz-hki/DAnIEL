@@ -16,32 +16,32 @@ RUN apt-get update && \
 	apt-get upgrade -y && \
 	apt-get install -y gnupg ca-certificates && \
 	apt-key adv --keyserver keyserver.ubuntu.com \
-		--recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9 && \
+	--recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9 && \
 	echo deb https://cloud.r-project.org/bin/linux/ubuntu bionic-cran35/ \
-		>> /etc/apt/sources.list && \
+	>> /etc/apt/sources.list && \
 	apt-get update && \
 	apt-get install -y \
-		apt-utils \
-		build-essential \
-		bzip2 \
-		cron \
-		curl \
-		git \
-		libcairo2-dev \
-		libcurl4-openssl-dev \
-		libfontconfig1-dev \
-		libssl-dev \
-		libv8-dev \
-		libxml2-dev \
-		locales \
-		mailutils \
-		msmtp \
-		msmtp-mta \
-		pandoc \
-		pandoc-citeproc \
-		r-base \
-		s-nail \
-		wget && \
+	apt-utils \
+	build-essential \
+	bzip2 \
+	cron \
+	curl \
+	git \
+	libcairo2-dev \
+	libcurl4-openssl-dev \
+	libfontconfig1-dev \
+	libssl-dev \
+	libv8-dev \
+	libxml2-dev \
+	locales \
+	mailutils \
+	msmtp \
+	msmtp-mta \
+	pandoc \
+	pandoc-citeproc \
+	r-base \
+	s-nail \
+	wget && \
 	apt-get clean && \
 	rm -rf /var/lib/apt/lists/* && \
 	sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
@@ -49,7 +49,7 @@ RUN apt-get update && \
 
 # Set the locale
 RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && \
-    locale-gen
+	locale-gen
 ENV LANG en_US.UTF-8  
 ENV LANGUAGE en_US:en  
 ENV LC_ALL en_US.UTF-8   
@@ -61,13 +61,13 @@ ENV LC_ALL en_US.UTF-8
 FROM base as conda
 
 RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-4.7.10-Linux-x86_64.sh \
-		-O ~/miniconda.sh && \
-    /bin/bash ~/miniconda.sh -b -p /opt/conda && \
-    rm ~/miniconda.sh && \
-    /opt/conda/bin/conda clean -tipsy && \
-    ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh && \
-    echo ". /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc && \
-    echo "conda activate base" >> ~/.bashrc && \
+	-O ~/miniconda.sh && \
+	/bin/bash ~/miniconda.sh -b -p /opt/conda && \
+	rm ~/miniconda.sh && \
+	/opt/conda/bin/conda clean -tipsy && \
+	ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh && \
+	echo ". /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc && \
+	echo "conda activate base" >> ~/.bashrc && \
 	conda clean --yes --all
 
 COPY back_end/envs/base.conda_env.yml ./
@@ -83,11 +83,11 @@ ARG DANIEL_DB_DIR
 ARG DANIEL_USERDAT_DIR
 
 RUN	snakemake \
-		--snakefile /app/back_end/daniel.build.snakefile.py \
-		--cores 10 \
-		--conda-prefix /opt/conda/envs/ \
-		--use-conda \
-		--create-envs-only && \
+	--snakefile /app/back_end/daniel.build.snakefile.py \
+	--cores 10 \
+	--conda-prefix /opt/conda/envs/ \
+	--use-conda \
+	--create-envs-only && \
 	conda clean --yes --all && \
 	rm -rf back_end
 
@@ -117,9 +117,6 @@ COPY --from=r /usr/local/lib/R/site-library /usr/local/lib/R/site-library
 
 # config files of root home
 COPY back_end/home /root/
-
-# Fix None zero returncode: biom convert in pipits_process
-RUN source activate /opt/conda/envs/3e5aa2f1/ && conda install -y h5py
 
 #
 # Production stage
