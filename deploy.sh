@@ -23,6 +23,9 @@ set +o allexport
 export COMPOSE_DOCKER_CLI_BUILD=1 
 export DOCKER_BUILDKIT=1
 
+git pull
+git lfs pull
+
 docker-compose pull
 docker-compose build --parallel
 docker-compose push
