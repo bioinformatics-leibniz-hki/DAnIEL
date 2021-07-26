@@ -7,6 +7,8 @@
 
 A user-friendly web server for fungal ITS amplicon sequencing data
 
+DAnIEL: *D*escribing, *An*alyzing and *I*ntegrating fungal *E*cology to effectively study the systems of *L*ife
+
 ## Features
 * Analysis of paired-end ITS amplicon sequencing data in any web browser
 * Statistics and machine learning between groups of samples
