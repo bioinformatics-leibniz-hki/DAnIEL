@@ -1,17 +1,18 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 authors:
-- family-names: "YOUR_NAME_HERE"
-  given-names: "YOUR_NAME_HERE"
-  orcid: "https://orcid.org/0000-0000-0000-0000"
-- family-names: "Lisa"
-  given-names: "Mona"
-  orcid: "https://orcid.org/0000-0000-0000-0000"
+- family-names: "Loos"
+  given-names: "Daniel"
+  orcid: "https://orcid.org/0000-0002-4024-4443"
+- family-names: "Zhang"
+  given-names: "Lu"
+- family-names: "Beemelmanns"
+  given-names: "Christine"
+- family-names: "Kurzai"
+  given-names: "Oliver"
+- family-names: "Panagiotou"
+  given-names: "Gianni"
 title: "DAnIEL: A User-Friendly Web Server for Fungal ITS Amplicon Sequencing Data"
-version: 1.0.0
-journal: Front. Microbiol.
-volume: 12
-pages: 2337
 doi: 10.3389/fmicb.2021.720513
 date-released: 2021-08-17
 url: "https://github.com/bioinformatics-leibniz-hki/DAnIEL"
