@@ -85,25 +85,43 @@ rule before_multiqc:
     input:
         TARGET_BEFORE_FASTQC
     output:
-        QC_DIR + "before/multiqc_report.html"
+        TARGET_BEFORE_MULTIQC
     params:
-        "--module fastqc"
+        args = "--module fastqc --force",
+        outdir = QC_DIR + "/before"
     log:
         QC_DIR + "before/multiqc.log"
-    wrapper:
-        "0.73.0/bio/multiqc"
+    conda:
+        "../envs/qc.conda_env.yml"
+    shell:
+        """
+        multiqc \
+            {params.args} \
+            -o {params.outdir} \
+            {input} \
+            2>&1 | tee -a {log}
+        """
 
 rule after_multiqc:
     input:
         TARGET_AFTER_FASTQC
     output:
-        QC_DIR + "after/multiqc_report.html"
+        TARGET_AFTER_MULTIQC
     params:
-        "--module fastqc --module cutadapt"
+        args = "--module fastqc --force",
+        outdir = QC_DIR + "/after/"
     log:
         QC_DIR + "after/multiqc.log"
-    wrapper:
-        "0.73.0/bio/multiqc"
+    conda:
+        "../envs/qc.conda_env.yml"
+    shell:
+        """
+        multiqc \
+            {params.args} \
+            -o {params.outdir} \
+            {input} \
+            2>&1 | tee -a {log}
+        """
 
 rule cutadapt:
     input:

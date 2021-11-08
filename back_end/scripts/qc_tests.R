@@ -55,7 +55,7 @@ args$qc_exclusion_criteria <-
 #   qc_exclusion_criteria = c("fastqc_adapter_content_failed", "min_qc_read_count_failed", "fastqc_per_base_sequence_quality_failed")
 # )
 
-after_multiqc_fastqc_path <- base::paste(args$qc_dir, "after/multiqc_report_data/multiqc_fastqc.txt", sep = "/")
+after_multiqc_fastqc_path <- base::paste(args$qc_dir, "after/multiqc_data/multiqc_fastqc.txt", sep = "/")
 out_dir <- base::paste(args$qc_dir, "final", sep = "/")
 
 

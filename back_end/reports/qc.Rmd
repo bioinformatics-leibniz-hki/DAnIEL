@@ -51,8 +51,8 @@ read_tsv_multiqc <- function(tsv_path) {
 
 qc_tbl <-
   list(
-    "Raw" = paste0(qc_dir, "/before/multiqc_report_data/multiqc_fastqc.txt"),
-    "QC" = paste0(qc_dir, "/after/multiqc_report_data/multiqc_fastqc.txt")
+    "Raw" = paste0(qc_dir, "/before/multiqc_data/multiqc_fastqc.txt"),
+    "QC" = paste0(qc_dir, "/after/multiqc_data/multiqc_fastqc.txt")
   ) %>%
   purrr::map(read_tsv_multiqc) %>%
   purrr::map2(names(.), ~ dplyr::mutate(.x, qc_step = .y)) %>%
