@@ -86,8 +86,7 @@ RUN	snakemake \
 	--snakefile /app/back_end/daniel.build.snakefile.py \
 	--cores 10 \
 	--conda-prefix /opt/conda/envs/ \
-	--use-conda \
-	--create-envs-only && \
+	--use-conda && \
 	conda clean --yes --all && \
 	rm -rf back_end
 
