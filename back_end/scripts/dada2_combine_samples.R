@@ -58,6 +58,7 @@ asv_tbl <-
       dplyr::select(-n)
   }) %>%
   dplyr::bind_rows() %>%
+  readr::type_convert() %>%
   dplyr::full_join(sample_asv_counts_tbl, by = c("sample_asv", "sample_id")) %>%
   dplyr::full_join(
     tibble(seq = .$seq %>% base::unique()) %>% dplyr::mutate(asv = base::paste0("ASV", dplyr::row_number())),
@@ -84,8 +85,7 @@ asv_profile_tbl <-
 
 #' @param x list with elements fwd_dada, rev_dada and file
 get_error_tbl <- function(x, mate = "fwd") {
-  switch(
-    mate,
+  switch(mate,
     "fwd" = {
       x$fwd_dada$err_out
     },
@@ -125,7 +125,7 @@ dada2_err_tbl <-
   tibble::enframe() %>%
   tidyr::expand_grid(mate = c("fwd", "rev")) %>%
   dplyr::mutate(error_tbl = value %>% map2(mate, purrr::possibly(get_error_tbl, NA))) %>%
-  dplyr::filter(! error_tbl %>% is.na()) %>%
+  dplyr::filter(!error_tbl %>% is.na()) %>%
   dplyr::pull(error_tbl) %>%
   dplyr::bind_rows()
 
