@@ -19,11 +19,17 @@ queue_file_check_interval=10
 conda_prefix=/opt/conda/envs/
 snakefile=/app/back_end/daniel.snakefile.py
 
+
 if [ -z "${DANIEL_THREADS}" ]; then
 	DANIEL_THREADS=10
 else
 	DANIEL_THREADS=${DANIEL_THREADS}
 fi
+export DANIEL_THREADS 
+
+# ensure the front end can write on the queue file 
+touch $queue_file
+chmod a+rw $queue_file
 
 # start crontabs e.g. for auto removing old projects
 echo "1 * * * * root find $DANIEL_USERDAT_DIR -maxdepth 1 -mindepth 1 -type d -mtime +35 | grep -v -E 'example|templates' | xargs rm -rf" >/etc/cron.d/remove_projects
@@ -70,6 +76,8 @@ function run_project {
 	echo "Process project $cur_project_id"
 	project_dir=$DANIEL_USERDAT_DIR/$cur_project_id/
 	configfile=$project_dir/input/project.json
+
+	touch /app/1
 
 	source activate base
 	cd $project_dir
