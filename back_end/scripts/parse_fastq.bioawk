@@ -6,6 +6,6 @@
 # - Ensure that every third line is only '+' (NCBi SRA writes the id there which PIPITS denies)
 
 {
-	name=gsub(/#[ATGC_]+/, "#", $name);
+	name=gsub(/#[A-Z_]+/, "#", $name);
 	print "@"$name"\n"$seq"\n+\n"$qual
 }
