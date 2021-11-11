@@ -19,7 +19,6 @@ TARGETS = [
     "analysis.done",
     "features.done",
     "qc.done",
-    "multiqc.done",
     "qiime.done",
     "raw.done",
 ]
@@ -57,14 +56,6 @@ rule env_features:
         "features.done",
     shell:
         "echo $CONDA_PREFIX > features.done"
-
-
-rule env_multiqc:
-    output:
-        "multiqc.done",
-    wrapper:
-        "0.38.0/bio/multiqc"
-
 
 rule env_qc:
     conda:
