@@ -209,7 +209,12 @@ binary_factor_cols <-
   base::names()
 
 # gather columns by test
-one_way_aov_cols <- factor_cols %>% base::setdiff(binary_factor_cols)
+one_way_aov_cols <-
+  factor_cols %>%
+  # ensure there are replicates for each level of each factor
+  keep(~ all(samples_tbl[[.x]] %>% table() > 1)) %>%
+  base::setdiff(binary_factor_cols)
+
 two_groups_cols <- logical_cols %>% base::union(binary_factor_cols)
 cor_cols <- numeric_cols
 
